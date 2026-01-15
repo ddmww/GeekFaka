@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        order: { select: { orderNo: true } },
+        orders: { select: { orderNo: true } },
         product: { select: { name: true } },
         category: { select: { name: true } }
       }
@@ -24,8 +24,13 @@ export async function GET(req: Request) {
     prisma.coupon.count()
   ]);
 
+  const items = coupons.map((c: any) => ({
+    ...c,
+    order: c.orders?.[0] || null
+  }));
+
   return NextResponse.json({
-    items: coupons,
+    items,
     total
   });
 }
