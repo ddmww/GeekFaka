@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getPaymentAdapter } from "@/lib/payments/registry";
 import { logger } from "@/lib/logger";
 
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
     // Generate a simple order number
     const orderNo = `HT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       if (validCouponId) {
         // Only mark as used if NOT reusable. For reusable, just update timestamp.
         const currentCoupon = await tx.coupon.findUnique({ where: { id: validCouponId } });
