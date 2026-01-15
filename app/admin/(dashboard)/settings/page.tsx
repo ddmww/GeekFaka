@@ -85,16 +85,16 @@ export default function SettingsPage() {
         body: JSON.stringify(payload),
         headers: { "Content-Type": "application/json" }
       })
-      
+
       if (res.ok) {
         alert("设置已保存")
         // Clear password field from draft after save for security
         const newDraft = { ...draftConfig }
         delete newDraft.admin_password
         setDraftConfig(newDraft)
-        
-        setConfig(newDraft) 
-        setSelectedProvider(null) 
+
+        setConfig(newDraft)
+        setSelectedProvider(null)
       } else {
         alert("保存失败")
       }
@@ -123,7 +123,7 @@ export default function SettingsPage() {
           <TabsTrigger value="site">站点设置</TabsTrigger>
           <TabsTrigger value="email">邮件通知</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="payment" className="space-y-4 mt-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {PROVIDERS.map((provider) => {
@@ -152,7 +152,7 @@ export default function SettingsPage() {
                         </Badge>
                       )}
                       {!isConfigured && (
-                         <span className="text-xs text-destructive ml-auto">未配置参数</span>
+                        <span className="text-xs text-destructive ml-auto">未配置参数</span>
                       )}
                     </div>
                   </CardContent>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <Label>网站标题</Label>
-                <Input 
+                <Input
                   value={draftConfig.site_title || ""}
                   onChange={e => handleChange("site_title", e.target.value)}
                   placeholder="GeekFaka - 自动发货平台"
@@ -180,7 +180,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid gap-2">
                 <Label>网站 URL (用于支付回调)</Label>
-                <Input 
+                <Input
                   value={draftConfig.site_url || ""}
                   onChange={e => handleChange("site_url", e.target.value)}
                   placeholder="https://your-domain.com"
@@ -192,49 +192,49 @@ export default function SettingsPage() {
 
               <div className="pt-4 border-t space-y-4">
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-                   <Settings className="h-4 w-4" /> 客服与联系
+                  <Settings className="h-4 w-4" /> 客服与联系
                 </h3>
                 <div className="grid gap-2">
-                   <Label>网站公告 (首页弹出/顶部显示)</Label>
-                   <Textarea 
-                     value={draftConfig.site_announcement || ""}
-                     onChange={e => handleChange("site_announcement", e.target.value)}
-                     placeholder="支持 Markdown。例如：🎉 欢迎光临！今日全场 9 折优惠。"
-                     className="min-h-[100px] font-mono text-sm"
-                   />
-                   <p className="text-xs text-muted-foreground">
-                     该内容将显示在网站首页的显著位置。
-                   </p>
+                  <Label>网站公告 (首页弹出/顶部显示)</Label>
+                  <Textarea
+                    value={draftConfig.site_announcement || ""}
+                    onChange={e => handleChange("site_announcement", e.target.value)}
+                    placeholder="支持 Markdown。例如：🎉 欢迎光临！今日全场 9 折优惠。"
+                    className="min-h-[100px] font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    该内容将显示在网站首页的显著位置。
+                  </p>
                 </div>
                 <div className="grid gap-2 pt-2">
-                   <Label>Crisp Website ID (在线客服)</Label>
-                   <Input 
-                     value={draftConfig.crisp_id || ""}
-                     onChange={e => handleChange("crisp_id", e.target.value)}
-                     placeholder="e.g. 8d40a5a2-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                     className="font-mono"
-                   />
-                   <p className="text-xs text-muted-foreground">
-                     在 <a href="https://crisp.chat/" target="_blank" className="underline hover:text-primary">Crisp</a> 注册并获取 Website ID，即可开启右下角在线客服。留空则关闭。
-                   </p>
+                  <Label>Crisp Website ID (在线客服)</Label>
+                  <Input
+                    value={draftConfig.crisp_id || ""}
+                    onChange={e => handleChange("crisp_id", e.target.value)}
+                    placeholder="e.g. 8d40a5a2-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    在 <a href="https://crisp.chat/" target="_blank" className="underline hover:text-primary">Crisp</a> 注册并获取 Website ID，即可开启右下角在线客服。留空则关闭。
+                  </p>
                 </div>
                 <div className="grid gap-2">
-                   <Label>底部联系方式</Label>
-                   <Textarea 
-                     value={draftConfig.site_contact_info || ""}
-                     onChange={e => handleChange("site_contact_info", e.target.value)}
-                     placeholder="支持 Markdown，例如：联系邮箱：`support@example.com`"
-                     className="min-h-[100px] font-mono text-sm"
-                   />
-                   <p className="text-xs text-muted-foreground">
-                     将显示在网站底部的版权信息下方。
-                   </p>
+                  <Label>底部联系方式</Label>
+                  <Textarea
+                    value={draftConfig.site_contact_info || ""}
+                    onChange={e => handleChange("site_contact_info", e.target.value)}
+                    placeholder="支持 Markdown，例如：联系邮箱：`support@example.com`"
+                    className="min-h-[100px] font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    将显示在网站底部的版权信息下方。
+                  </p>
                 </div>
               </div>
-              
+
               <div className="grid gap-2 pt-4 border-t">
                 <Label>修改管理员密码</Label>
-                <Input 
+                <Input
                   type="password"
                   value={draftConfig.admin_password || ""}
                   onChange={e => handleChange("admin_password", e.target.value)}
@@ -255,19 +255,94 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="email" className="mt-6">
+        <TabsContent value="email" className="mt-6 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Resend 邮件服务</CardTitle>
-              <CardDescription>配置订单支付成功后的邮件通知</CardDescription>
+              <CardTitle>阿里云邮件推送 (Aliyun Direct Mail) [推荐]</CardTitle>
+              <CardDescription>使用阿里云 SMTP 服务发送邮件，国内送达率高。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
                 <div className="space-y-0.5">
-                  <Label className="text-base">开启邮件通知</Label>
-                  <p className="text-xs text-muted-foreground">订单支付成功后自动发送卡密到客户邮箱</p>
+                  <Label className="text-base">启用阿里云推送</Label>
+                  <p className="text-xs text-muted-foreground">优先使用此通道发送邮件</p>
                 </div>
-                <Switch 
+                <Switch
+                  checked={draftConfig.aliyun_enabled === "true"}
+                  onCheckedChange={(checked) => handleChange("aliyun_enabled", String(checked))}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>SMTP 地址 (Host)</Label>
+                  <Input
+                    value={draftConfig.aliyun_smtp_host || "smtpdm.aliyun.com"}
+                    onChange={e => handleChange("aliyun_smtp_host", e.target.value)}
+                    placeholder="smtpdm.aliyun.com"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>端口 (Port)</Label>
+                  <Input
+                    value={draftConfig.aliyun_smtp_port || "465"}
+                    onChange={e => handleChange("aliyun_smtp_port", e.target.value)}
+                    placeholder="465"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>发信地址 (From Email)</Label>
+                <Input
+                  value={draftConfig.aliyun_from_email || ""}
+                  onChange={e => handleChange("aliyun_from_email", e.target.value)}
+                  placeholder="必须与阿里云后台配置的发信地址一致"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>SMTP 账号 (User)</Label>
+                  <Input
+                    value={draftConfig.aliyun_smtp_user || ""}
+                    onChange={e => handleChange("aliyun_smtp_user", e.target.value)}
+                    placeholder="例如：admin@mail.example.com"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>SMTP 密码 (Password)</Label>
+                  <Input
+                    type="password"
+                    value={draftConfig.aliyun_smtp_pass || ""}
+                    onChange={e => handleChange("aliyun_smtp_pass", e.target.value)}
+                    placeholder="在阿里云控制台设置的 SMTP 密码"
+                  />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                保存配置
+              </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Resend 邮件服务</CardTitle>
+              <CardDescription>备用方案：配置订单支付成功后的邮件通知</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
+                <div className="space-y-0.5">
+                  <Label className="text-base">启用 Resend</Label>
+                  <p className="text-xs text-muted-foreground">如果未启用阿里云或阿里云发送失败，将尝试使用此通道</p>
+                </div>
+                <Switch
                   checked={draftConfig.resend_enabled === "true"}
                   onCheckedChange={(checked) => handleChange("resend_enabled", String(checked))}
                 />
@@ -275,7 +350,7 @@ export default function SettingsPage() {
 
               <div className="grid gap-2">
                 <Label>Resend API Key</Label>
-                <Input 
+                <Input
                   type="password"
                   value={draftConfig.resend_api_key || ""}
                   onChange={e => handleChange("resend_api_key", e.target.value)}
@@ -289,7 +364,7 @@ export default function SettingsPage() {
 
               <div className="grid gap-2">
                 <Label>发件人邮箱 (From Email)</Label>
-                <Input 
+                <Input
                   value={draftConfig.resend_from_email || ""}
                   onChange={e => handleChange("resend_from_email", e.target.value)}
                   placeholder="notifications@yourdomain.com"
@@ -319,132 +394,132 @@ export default function SettingsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-              <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
-                <div className="space-y-0.5">
-                  <Label className="text-base">启用此支付渠道</Label>
-                  <p className="text-xs text-muted-foreground">关闭后前台将不可见</p>
-                </div>
-                <Switch 
-                  checked={draftConfig.epay_enabled === "true"}
-                  onCheckedChange={(checked) => handleChange("epay_enabled", String(checked))}
-                />
+            <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
+              <div className="space-y-0.5">
+                <Label className="text-base">启用此支付渠道</Label>
+                <p className="text-xs text-muted-foreground">关闭后前台将不可见</p>
               </div>
+              <Switch
+                checked={draftConfig.epay_enabled === "true"}
+                onCheckedChange={(checked) => handleChange("epay_enabled", String(checked))}
+              />
+            </div>
 
-              {/* Sub-channel Selection */}
-              <div className="grid gap-3 border rounded-lg p-4">
-                <Label>支持的支付方式</Label>
-                <div className="grid grid-cols-2 gap-4">
-                  {EPAY_SUB_CHANNELS.map((sub) => {
-                    const currentChannels = (draftConfig.epay_channels || "").split(",").filter(Boolean);
-                    const isChecked = currentChannels.includes(sub.id);
-                    
-                    return (
-                      <div key={sub.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`chan-${sub.id}`} 
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            let newChannels;
-                            if (checked) {
-                              newChannels = [...currentChannels, sub.id];
-                            } else {
-                              newChannels = currentChannels.filter(c => c !== sub.id);
-                            }
-                            handleChange("epay_channels", newChannels.join(","));
-                          }}
-                        />
-                        <Label htmlFor={`chan-${sub.id}`} className="font-normal cursor-pointer">
-                          {sub.label}
-                        </Label>
-                      </div>
-                    )
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">勾选您的易支付网关实际支持的支付方式。</p>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>交易手续费率 (%)</Label>
-                <div className="relative">
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    placeholder="0"
-                    className="pr-8"
-                    value={draftConfig.epay_fee || ""}
-                    onChange={e => handleChange("epay_fee", e.target.value)}
-                  />
-                  <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">用户支付时需额外承担的费率，0 为不收取。例如填 3 代表 3%。</p>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>API 接口地址</Label>
-                <Input 
-                  placeholder="https://pay.example.com/" 
-                  value={draftConfig.epay_api_url || ""}
-                  onChange={e => handleChange("epay_api_url", e.target.value)}
-                />
-              </div>
+            {/* Sub-channel Selection */}
+            <div className="grid gap-3 border rounded-lg p-4">
+              <Label>支持的支付方式</Label>
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>商户 ID (PID)</Label>
-                  <Input 
-                    value={draftConfig.epay_pid || ""}
-                    onChange={e => handleChange("epay_pid", e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>签名方式</Label>
-                  <Select 
-                    value={draftConfig.epay_sign_type || "MD5"} 
-                    onValueChange={val => handleChange("epay_sign_type", val)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MD5">MD5 (默认)</SelectItem>
-                      <SelectItem value="RSA">RSA (推荐)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                {EPAY_SUB_CHANNELS.map((sub) => {
+                  const currentChannels = (draftConfig.epay_channels || "").split(",").filter(Boolean);
+                  const isChecked = currentChannels.includes(sub.id);
 
-              {draftConfig.epay_sign_type === "RSA" ? (
-                <>
-                  <div className="grid gap-2">
-                    <Label>商户私钥 (Private Key)</Label>
-                    <Textarea 
-                      placeholder="-----BEGIN RSA PRIVATE KEY-----" 
-                      className="font-mono text-xs h-32"
-                      value={draftConfig.epay_private_key || ""}
-                      onChange={e => handleChange("epay_private_key", e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">请填入你的 RSA 私钥 (PKCS#1 或 PKCS#8)</p>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>平台公钥 (Public Key)</Label>
-                    <Textarea 
-                      placeholder="-----BEGIN PUBLIC KEY-----" 
-                      className="font-mono text-xs h-32"
-                      value={draftConfig.epay_public_key || ""}
-                      onChange={e => handleChange("epay_public_key", e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">请填入易支付平台的公钥用于验签</p>
-                  </div>
-                </>
-              ) : (
+                  return (
+                    <div key={sub.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`chan-${sub.id}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          let newChannels;
+                          if (checked) {
+                            newChannels = [...currentChannels, sub.id];
+                          } else {
+                            newChannels = currentChannels.filter(c => c !== sub.id);
+                          }
+                          handleChange("epay_channels", newChannels.join(","));
+                        }}
+                      />
+                      <Label htmlFor={`chan-${sub.id}`} className="font-normal cursor-pointer">
+                        {sub.label}
+                      </Label>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">勾选您的易支付网关实际支持的支付方式。</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>交易手续费率 (%)</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  className="pr-8"
+                  value={draftConfig.epay_fee || ""}
+                  onChange={e => handleChange("epay_fee", e.target.value)}
+                />
+                <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">用户支付时需额外承担的费率，0 为不收取。例如填 3 代表 3%。</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>API 接口地址</Label>
+              <Input
+                placeholder="https://pay.example.com/"
+                value={draftConfig.epay_api_url || ""}
+                onChange={e => handleChange("epay_api_url", e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>商户 ID (PID)</Label>
+                <Input
+                  value={draftConfig.epay_pid || ""}
+                  onChange={e => handleChange("epay_pid", e.target.value)}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>签名方式</Label>
+                <Select
+                  value={draftConfig.epay_sign_type || "MD5"}
+                  onValueChange={val => handleChange("epay_sign_type", val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MD5">MD5 (默认)</SelectItem>
+                    <SelectItem value="RSA">RSA (推荐)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {draftConfig.epay_sign_type === "RSA" ? (
+              <>
                 <div className="grid gap-2">
-                  <Label>商户密钥 (Key)</Label>
-                  <Input 
-                    type="password"
-                    value={draftConfig.epay_key || ""}
-                    onChange={e => handleChange("epay_key", e.target.value)}
+                  <Label>商户私钥 (Private Key)</Label>
+                  <Textarea
+                    placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                    className="font-mono text-xs h-32"
+                    value={draftConfig.epay_private_key || ""}
+                    onChange={e => handleChange("epay_private_key", e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">请填入你的 RSA 私钥 (PKCS#1 或 PKCS#8)</p>
                 </div>
-              )}
+                <div className="grid gap-2">
+                  <Label>平台公钥 (Public Key)</Label>
+                  <Textarea
+                    placeholder="-----BEGIN PUBLIC KEY-----"
+                    className="font-mono text-xs h-32"
+                    value={draftConfig.epay_public_key || ""}
+                    onChange={e => handleChange("epay_public_key", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">请填入易支付平台的公钥用于验签</p>
+                </div>
+              </>
+            ) : (
+              <div className="grid gap-2">
+                <Label>商户密钥 (Key)</Label>
+                <Input
+                  type="password"
+                  value={draftConfig.epay_key || ""}
+                  onChange={e => handleChange("epay_key", e.target.value)}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedProvider(null)}>取消</Button>
