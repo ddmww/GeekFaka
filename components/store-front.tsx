@@ -225,7 +225,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
 
         {categories.map((cat) => (
           <TabsContent key={cat.id} value={cat.id} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
               {cat.products.map((product) => (
                 <Card
                   key={product.id}
