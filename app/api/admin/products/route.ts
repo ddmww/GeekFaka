@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (!await isAuthenticated()) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const { name, description, price, categoryId, deliveryFormat } = await req.json();
+    const { name, description, price, categoryId, deliveryFormat, enableCoupons } = await req.json();
 
     const product = await prisma.product.create({
       data: {
@@ -63,10 +63,11 @@ export async function POST(req: Request) {
         description,
         price,
         categoryId,
-        deliveryFormat: deliveryFormat || "SINGLE"
+        deliveryFormat: deliveryFormat || "SINGLE",
+        enableCoupons: enableCoupons ?? true
       }
     });
-    
+
     log.info({ productId: product.id, name }, "Product created");
     return NextResponse.json(product);
   } catch (error) {

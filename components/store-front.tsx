@@ -19,6 +19,7 @@ interface Product {
   description: string | null
   price: string
   stock: number
+  enableCoupons: boolean
 }
 
 interface Category {
@@ -30,7 +31,7 @@ interface Category {
 interface PaymentChannel {
   id: string
   name: string
-  icon: string 
+  icon: string
   provider: string
   fee?: number
 }
@@ -39,11 +40,11 @@ export function StoreFront({ categories }: { categories: Category[] }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isBuyOpen, setIsBuyOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  
+
   // Payment Channels
   const [channels, setChannels] = useState<PaymentChannel[]>([])
-  const [paymentMethod, setPaymentMethod] = useState("") 
-  
+  const [paymentMethod, setPaymentMethod] = useState("")
+
   // Form State
   const [email, setEmail] = useState("")
   const [quantity, setQuantity] = useState(1)
@@ -52,17 +53,17 @@ export function StoreFront({ categories }: { categories: Category[] }) {
   // Coupon State
   const [couponCode, setCouponCode] = useState("")
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
-  const [appliedCoupon, setAppliedCoupon] = useState<{ 
-    code: string, 
-    discountType: "FIXED" | "PERCENTAGE", 
-    discountValue: number 
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string,
+    discountType: "FIXED" | "PERCENTAGE",
+    discountValue: number
   } | null>(null)
   const [couponError, setCouponError] = useState("")
 
   // Derived State
   const selectedChannel = channels.find(c => c.id === paymentMethod)
   const subtotal = selectedProduct ? Number(selectedProduct.price) * quantity : 0
-  
+
   // Calculate discount
   let discount = 0
   if (appliedCoupon) {
@@ -107,7 +108,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
     if (!couponCode.trim()) return
     setIsValidatingCoupon(true)
     setCouponError("")
-    
+
     try {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
@@ -115,12 +116,12 @@ export function StoreFront({ categories }: { categories: Category[] }) {
         body: JSON.stringify({ code: couponCode, productId: selectedProduct?.id })
       })
       const data = await res.json()
-      
+
       if (res.ok) {
-        setAppliedCoupon({ 
-          code: data.code, 
-          discountType: data.discountType, 
-          discountValue: Number(data.discountValue) 
+        setAppliedCoupon({
+          code: data.code,
+          discountType: data.discountType,
+          discountValue: Number(data.discountValue)
         })
       } else {
         setCouponError(data.error || "无效的优惠码")
@@ -141,12 +142,12 @@ export function StoreFront({ categories }: { categories: Category[] }) {
 
   const handlePurchase = async () => {
     if (!selectedProduct) return
-    
+
     if (!validateEmail(email)) {
       setEmailError("请输入有效的邮箱地址，用于接收订单通知")
       return
     }
-    
+
     if (!paymentMethod) {
       alert("请选择支付方式")
       return
@@ -163,11 +164,11 @@ export function StoreFront({ categories }: { categories: Category[] }) {
       const payload = {
         productId: selectedProduct.id,
         quantity,
-        email: email, 
+        email: email,
         paymentMethod: providerName,
         couponCode: appliedCoupon?.code,
         options: {
-          channel: paymentMethod === "wechat" ? "wxpay" : paymentMethod 
+          channel: paymentMethod === "wechat" ? "wxpay" : paymentMethod
         }
       }
 
@@ -176,9 +177,9 @@ export function StoreFront({ categories }: { categories: Category[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
-      
+
       const data = await res.json()
-      
+
       if (!res.ok) {
         alert(data.error || "下单失败")
         return
@@ -211,8 +212,8 @@ export function StoreFront({ categories }: { categories: Category[] }) {
         <div className="flex justify-center mb-10">
           <TabsList className="h-12 bg-secondary/50 backdrop-blur p-1 rounded-full border border-border/50">
             {categories.map((cat) => (
-              <TabsTrigger 
-                key={cat.id} 
+              <TabsTrigger
+                key={cat.id}
                 value={cat.id}
                 className="rounded-full px-6 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"
               >
@@ -224,74 +225,74 @@ export function StoreFront({ categories }: { categories: Category[] }) {
 
         {categories.map((cat) => (
           <TabsContent key={cat.id} value={cat.id} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {cat.products.map((product) => (
-                  <Card 
-                    key={product.id} 
-                    className={cn(
-                      "group relative overflow-hidden border border-primary/20 bg-card/80 shadow-md backdrop-blur transition-all duration-300",
-                      product.stock > 0 
-                        ? "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1" 
-                        : "opacity-60 grayscale-[0.8] cursor-not-allowed pointer-events-none"
-                    )}
-                  >
-                    {/* Hover Overlay for Details */}
-                    <div className="absolute inset-0 bg-background/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex flex-col justify-center items-center p-6 text-center">
-                       <h4 className="font-bold text-lg mb-2 text-primary">{product.name}</h4>
-                       <div className="text-sm text-muted-foreground line-clamp-6">
-                         <ReactMarkdown>{product.description || "暂无详细描述"}</ReactMarkdown>
-                       </div>
-                       <Button 
-                         variant="outline" 
-                         className="mt-4 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
-                         onClick={(e) => {
-                           handleBuyClick(product)
-                         }}
-                       >
-                         查看详情 & 购买
-                       </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {cat.products.map((product) => (
+                <Card
+                  key={product.id}
+                  className={cn(
+                    "group relative overflow-hidden border border-primary/20 bg-card/80 shadow-md backdrop-blur transition-all duration-300",
+                    product.stock > 0
+                      ? "hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1"
+                      : "opacity-60 grayscale-[0.8] cursor-not-allowed pointer-events-none"
+                  )}
+                >
+                  {/* Hover Overlay for Details */}
+                  <div className="absolute inset-0 bg-background/95 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex flex-col justify-center items-center p-6 text-center">
+                    <h4 className="font-bold text-lg mb-2 text-primary">{product.name}</h4>
+                    <div className="text-sm text-muted-foreground line-clamp-6">
+                      <ReactMarkdown>{product.description || "暂无详细描述"}</ReactMarkdown>
                     </div>
+                    <Button
+                      variant="outline"
+                      className="mt-4 border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground"
+                      onClick={(e) => {
+                        handleBuyClick(product)
+                      }}
+                    >
+                      查看详情 & 购买
+                    </Button>
+                  </div>
 
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                    
-                    <CardHeader>
-                      <CardTitle className="text-xl font-bold leading-tight line-clamp-2 min-h-[3rem]">
-                        {product.name}
-                      </CardTitle>
-                      {/* Hide description in default view to keep it clean */}
-                      <div className="h-[2.5rem]" /> 
-                    </CardHeader>
-                    
-                    <CardContent>
-                       <div className="flex items-center justify-between">
-                         <div className="flex items-baseline gap-1 text-primary">
-                           <span className="text-sm font-medium">¥</span>
-                           <span className="text-3xl font-bold tracking-tight">{Number(product.price).toFixed(2)}</span>
-                         </div>
-                         <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="px-3 py-1">
-                           {product.stock > 0 ? (
-                             <span className="flex items-center gap-1.5 font-medium">
-                               <Package className="h-3.5 w-3.5" /> 库存 {product.stock}
-                             </span>
-                           ) : "缺货"}
-                         </Badge>
-                       </div>
-                    </CardContent>
-                    
-                    <CardFooter>
-                      <Button 
-                        className="w-full font-semibold shadow-lg shadow-primary/20 transition-all" 
-                        disabled={product.stock <= 0}
-                        onClick={() => handleBuyClick(product)}
-                        size="lg"
-                      >
-                        <ShoppingCart className="mr-2 h-4 w-4" /> 
-                        {product.stock > 0 ? "立即购买" : "已售罄"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-             </div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                  <CardHeader>
+                    <CardTitle className="text-xl font-bold leading-tight line-clamp-2 min-h-[3rem]">
+                      {product.name}
+                    </CardTitle>
+                    {/* Hide description in default view to keep it clean */}
+                    <div className="h-[2.5rem]" />
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-baseline gap-1 text-primary">
+                        <span className="text-sm font-medium">¥</span>
+                        <span className="text-3xl font-bold tracking-tight">{Number(product.price).toFixed(2)}</span>
+                      </div>
+                      <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="px-3 py-1">
+                        {product.stock > 0 ? (
+                          <span className="flex items-center gap-1.5 font-medium">
+                            <Package className="h-3.5 w-3.5" /> 库存 {product.stock}
+                          </span>
+                        ) : "缺货"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+
+                  <CardFooter>
+                    <Button
+                      className="w-full font-semibold shadow-lg shadow-primary/20 transition-all"
+                      disabled={product.stock <= 0}
+                      onClick={() => handleBuyClick(product)}
+                      size="lg"
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      {product.stock > 0 ? "立即购买" : "已售罄"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         ))}
       </Tabs>
@@ -312,10 +313,10 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                   </Badge>
                 </div>
               </DialogHeader>
-              
+
               <div className="flex-1 prose prose-sm dark:prose-invert max-w-none pr-2">
-                 <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">商品详情</div>
-                 <ReactMarkdown>{selectedProduct?.description || "暂无详细描述"}</ReactMarkdown>
+                <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">商品详情</div>
+                <ReactMarkdown>{selectedProduct?.description || "暂无详细描述"}</ReactMarkdown>
               </div>
             </div>
 
@@ -325,7 +326,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5" /> 订单配置
                 </h3>
-                
+
                 <div className="grid gap-2">
                   <Label htmlFor="email" className={cn(emailError && "text-destructive")}>
                     接收邮箱 {emailError && <span className="text-xs font-normal ml-2 text-destructive">{emailError}</span>}
@@ -353,33 +354,35 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                   />
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="coupon">优惠码 (可选)</Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        id="coupon"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        placeholder="输入优惠码"
-                        className={cn("bg-background pr-8 uppercase font-mono", appliedCoupon && "border-green-500 focus-visible:ring-green-500")}
-                        disabled={!!appliedCoupon}
-                      />
-                      {appliedCoupon && <Check className="absolute right-2.5 top-2.5 h-4 w-4 text-green-500" />}
+                {(selectedProduct?.enableCoupons ?? true) && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="coupon">优惠码 (可选)</Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          id="coupon"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                          placeholder="输入优惠码"
+                          className={cn("bg-background pr-8 uppercase font-mono", appliedCoupon && "border-green-500 focus-visible:ring-green-500")}
+                          disabled={!!appliedCoupon}
+                        />
+                        {appliedCoupon && <Check className="absolute right-2.5 top-2.5 h-4 w-4 text-green-500" />}
+                      </div>
+                      {appliedCoupon ? (
+                        <Button variant="outline" size="icon" onClick={() => { setAppliedCoupon(null); setCouponCode(""); }} className="shrink-0">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="secondary" onClick={handleApplyCoupon} disabled={isValidatingCoupon || !couponCode.trim()} className="shrink-0">
+                          {isValidatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "使用"}
+                        </Button>
+                      )}
                     </div>
-                    {appliedCoupon ? (
-                      <Button variant="outline" size="icon" onClick={() => { setAppliedCoupon(null); setCouponCode(""); }} className="shrink-0">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button variant="secondary" onClick={handleApplyCoupon} disabled={isValidatingCoupon || !couponCode.trim()} className="shrink-0">
-                        {isValidatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "使用"}
-                      </Button>
-                    )}
+                    {couponError && <p className="text-[10px] text-destructive ml-1">{couponError}</p>}
+                    {appliedCoupon && <p className="text-[10px] text-green-600 ml-1 font-medium flex items-center gap-1"><Ticket className="h-3 w-3" /> 已减免 ¥{discount.toFixed(2)}</p>}
                   </div>
-                  {couponError && <p className="text-[10px] text-destructive ml-1">{couponError}</p>}
-                  {appliedCoupon && <p className="text-[10px] text-green-600 ml-1 font-medium flex items-center gap-1"><Ticket className="h-3 w-3" /> 已减免 ¥{discount.toFixed(2)}</p>}
-                </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -433,7 +436,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                     )}
                   </div>
                 </div>
-                
+
                 <Button size="lg" className="w-full font-bold text-lg h-12 shadow-lg shadow-primary/20" onClick={handlePurchase} disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {loading ? "正在处理..." : "立即支付"}

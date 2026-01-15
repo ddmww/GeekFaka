@@ -48,6 +48,7 @@ model Product {
   deliveryFormat String    @default("SINGLE") // SINGLE, ACCOUNT_PASS, ACCOUNT_FULL, PROXY_IP, VIRTUAL_CARD
   
   isActive       Boolean   @default(true)
+  enableCoupons  Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }

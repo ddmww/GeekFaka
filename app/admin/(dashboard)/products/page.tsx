@@ -27,6 +27,7 @@ interface Product {
   categoryId: string
   category: Category
   isActive: boolean
+  enableCoupons: boolean
   deliveryFormat: string
   _count: {
     licenses: number
@@ -38,7 +39,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
-  
+
   // Filter & Pagination State
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -47,7 +48,7 @@ export default function ProductsPage() {
   // Stock State
   const [stockProduct, setStockProduct] = useState<Product | null>(null)
   const [isStockOpen, setIsStockOpen] = useState(false)
-  
+
   // Form State
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -56,7 +57,8 @@ export default function ProductsPage() {
     description: "",
     price: "",
     categoryId: "",
-    deliveryFormat: "SINGLE"
+    deliveryFormat: "SINGLE",
+    enableCoupons: true
   })
 
   useEffect(() => {
@@ -76,10 +78,10 @@ export default function ProductsPage() {
         fetch(`/api/admin/products?${queryParams}`),
         fetch("/api/admin/categories")
       ])
-      
+
       const prodData = await prodRes.json()
       const catData = await catRes.json()
-      
+
       if (prodRes.ok) {
         setProducts(prodData.products || [])
         setTotalPages(prodData.pagination?.pages || 1)
@@ -102,7 +104,8 @@ export default function ProductsPage() {
         description: product.description || "",
         price: product.price,
         categoryId: product.categoryId,
-        deliveryFormat: product.deliveryFormat || "SINGLE"
+        deliveryFormat: product.deliveryFormat || "SINGLE",
+        enableCoupons: product.enableCoupons ?? true
       })
     } else {
       setEditingProduct(null)
@@ -111,7 +114,8 @@ export default function ProductsPage() {
         description: "",
         price: "",
         categoryId: categories[0]?.id || "",
-        deliveryFormat: "SINGLE"
+        deliveryFormat: "SINGLE",
+        enableCoupons: true
       })
     }
     setIsDialogOpen(true)
@@ -120,7 +124,7 @@ export default function ProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitLoading(true)
-    
+
     const url = editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products"
     const method = editingProduct ? "PATCH" : "POST"
 
@@ -156,7 +160,7 @@ export default function ProductsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除此商品吗？如果有关联的卡密可能会失败。")) return
-    
+
     try {
       const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" })
       if (res.ok) {
@@ -178,25 +182,25 @@ export default function ProductsPage() {
           <p className="text-muted-foreground">创建、编辑商品并管理库存</p>
         </div>
         <div className="flex items-center gap-2">
-           <div className="w-[180px]">
-             <Select value={selectedCategory} onValueChange={(val) => { setPage(1); setSelectedCategory(val); }}>
-               <SelectTrigger>
-                 <div className="flex items-center gap-2">
-                   <Filter className="h-4 w-4 text-muted-foreground" />
-                   <SelectValue placeholder="全部分类" />
-                 </div>
-               </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="all">全部分类</SelectItem>
-                 {categories.map(cat => (
-                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                 ))}
-               </SelectContent>
-             </Select>
-           </div>
-           <Button onClick={() => handleOpenDialog()}>
-             <Plus className="mr-2 h-4 w-4" /> 新增商品
-           </Button>
+          <div className="w-[180px]">
+            <Select value={selectedCategory} onValueChange={(val) => { setPage(1); setSelectedCategory(val); }}>
+              <SelectTrigger>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="全部分类" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部分类</SelectItem>
+                {categories.map(cat => (
+                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="mr-2 h-4 w-4" /> 新增商品
+          </Button>
         </div>
       </div>
 
@@ -232,7 +236,7 @@ export default function ProductsPage() {
                     <TableCell className="py-4 relative">
                       {/* 侧边装饰条 */}
                       <div className="absolute left-0 top-4 bottom-4 w-1 bg-primary rounded-r-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                      
+
                       <div className="flex flex-col gap-1.5 pl-2">
                         <span className="text-xl font-black text-slate-50 tracking-tight drop-shadow-sm leading-tight">
                           {product.name}
@@ -260,51 +264,51 @@ export default function ProductsPage() {
                     <TableCell>
                       <div className={cn(
                         "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
-                        product._count.licenses === 0 
-                          ? "bg-destructive/10 text-destructive border-destructive/20" 
+                        product._count.licenses === 0
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
                           : "bg-green-500/10 text-green-500 border-green-500/20"
                       )}>
                         {`库存: ${product._count.licenses}`}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Switch 
-                        checked={product.isActive} 
+                      <Switch
+                        checked={product.isActive}
                         onCheckedChange={() => handleToggleActive(product.id, product.isActive)}
                       />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                         <Button 
-                           variant="secondary" 
-                           size="sm" 
-                           className="h-8 px-2 lg:px-3 bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/20"
-                           onClick={() => {
-                             setStockProduct(product)
-                             setIsStockOpen(true)
-                           }}
-                         >
-                           <Key className="h-3.5 w-3.5 mr-1" />
-                           库存
-                         </Button>
-                         <Button 
-                           variant="secondary" 
-                           size="sm" 
-                           className="h-8 px-2 lg:px-3 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-                           onClick={() => handleOpenDialog(product)}
-                         >
-                           <Edit2 className="h-3.5 w-3.5 mr-1" />
-                           编辑
-                         </Button>
-                         <Button 
-                           variant="ghost" 
-                           size="sm" 
-                           className="h-8 px-2 lg:px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                           onClick={() => handleDelete(product.id)}
-                         >
-                           <Trash2 className="h-3.5 w-3.5 mr-1" />
-                           删除
-                         </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 px-2 lg:px-3 bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/20"
+                          onClick={() => {
+                            setStockProduct(product)
+                            setIsStockOpen(true)
+                          }}
+                        >
+                          <Key className="h-3.5 w-3.5 mr-1" />
+                          库存
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 px-2 lg:px-3 bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                          onClick={() => handleOpenDialog(product)}
+                        >
+                          <Edit2 className="h-3.5 w-3.5 mr-1" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 lg:px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" />
+                          删除
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -344,7 +348,7 @@ export default function ProductsPage() {
 
       {/* Stock Management Dialog */}
       {stockProduct && (
-        <StockManager 
+        <StockManager
           productId={stockProduct.id}
           productName={stockProduct.name}
           open={isStockOpen}
@@ -362,7 +366,7 @@ export default function ProductsPage() {
               配置商品详情与描述信息
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-1">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
               {/* Left Column: Basic Info */}
@@ -379,8 +383,8 @@ export default function ProductsPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="categoryId">所属分类</Label>
-                  <Select 
-                    value={formData.categoryId} 
+                  <Select
+                    value={formData.categoryId}
                     onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
                   >
                     <SelectTrigger>
@@ -411,8 +415,8 @@ export default function ProductsPage() {
 
                 <div className="grid gap-2">
                   <Label>发货格式</Label>
-                  <Select 
-                    value={formData.deliveryFormat} 
+                  <Select
+                    value={formData.deliveryFormat}
                     onValueChange={(val) => setFormData({ ...formData, deliveryFormat: val })}
                   >
                     <SelectTrigger>
@@ -429,14 +433,25 @@ export default function ProductsPage() {
                   <p className="text-[10px] text-muted-foreground">影响用户查收卡密时的展示方式</p>
                 </div>
 
+                <div className="flex items-center justify-between border p-3 rounded-md">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">启用优惠码</Label>
+                    <p className="text-xs text-muted-foreground">关闭后，用户购买此商品时无法使用优惠码</p>
+                  </div>
+                  <Switch
+                    checked={formData.enableCoupons}
+                    onCheckedChange={(checked) => setFormData({ ...formData, enableCoupons: checked })}
+                  />
+                </div>
+
                 <div className="pt-4">
-                   <p className="text-xs text-muted-foreground leading-relaxed">
-                     提示：<br/>
-                     1. 商品创建后默认为上架状态。<br/>
-                     2. 请在“库存管理”中添加卡密。<br/>
-                     3. 描述支持图片和超链接。<br/>
-                     4. 请务必按所选格式添加卡密。
-                   </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    提示：<br />
+                    1. 商品创建后默认为上架状态。<br />
+                    2. 请在“库存管理”中添加卡密。<br />
+                    3. 描述支持图片和超链接。<br />
+                    4. 请务必按所选格式添加卡密。
+                  </p>
                 </div>
               </div>
 

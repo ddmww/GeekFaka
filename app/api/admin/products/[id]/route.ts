@@ -13,7 +13,7 @@ export async function PATCH(
   if (!await isAuthenticated()) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const { name, description, price, categoryId, isActive, deliveryFormat } = await req.json();
+    const { name, description, price, categoryId, isActive, deliveryFormat, enableCoupons } = await req.json();
     const { id } = params;
 
     const product = await prisma.product.update({
@@ -24,10 +24,11 @@ export async function PATCH(
         price,
         categoryId,
         isActive,
-        deliveryFormat
+        deliveryFormat,
+        enableCoupons
       }
     });
-    
+
     log.info({ productId: id, changes: { name, price, isActive, deliveryFormat } }, "Product updated");
     return NextResponse.json(product);
   } catch (error) {
@@ -45,11 +46,11 @@ export async function DELETE(
 
   try {
     const { id } = params;
-    
+
     await prisma.product.delete({
       where: { id }
     });
-    
+
     log.info({ productId: id }, "Product deleted");
     return NextResponse.json({ success: true });
   } catch (error) {
