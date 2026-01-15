@@ -79,7 +79,7 @@ model Order {
   paidAt        DateTime?
   emailSent     Boolean   @default(false)
   couponId      String?   // Removed @unique to allow reusable coupons
-  coupon        Coupon?   @relation(fields: [couponId], references: [id])
+  coupon        Coupon?   @relation(fields: [couponId], references: [id], map: "Order_couponId_fkey_v2")
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
