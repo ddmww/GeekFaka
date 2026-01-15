@@ -1,0 +1,110 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  key         String   @id
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  priority  Int       @default(0)
+  products  Product[]
+  coupons   Coupon[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  price          Decimal
+  categoryId     String
+  category       Category  @relation(fields: [categoryId], references: [id])
+  licenses       License[]
+  orders         Order[]
+  coupons        Coupon[]
+  deliveryFormat String    @default("SINGLE") // SINGLE, ACCOUNT_PASS, ACCOUNT_FULL, PROXY_IP, VIRTUAL_CARD
+  
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model License {
+  id          String   @id @default(cuid())
+  code        String   // The actual card content/key
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  status      String   @default("AVAILABLE") // AVAILABLE, SOLD, LOCKED
+  orderId     String?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id            String    @id @default(cuid())
+  orderNo       String    @unique // Readable order number
+  email         String?   // Contact info
+  totalAmount   Decimal
+  status        String    @default("PENDING") // PENDING, PAID, FAILED, EXPIRED
+  productId     String
+  product       Product   @relation(fields: [productId], references: [id])
+  quantity      Int       @default(1)
+  licenses      License[]
+  paymentMethod String?
+  paidAt        DateTime?
+  emailSent     Boolean   @default(false)
+  couponId      String?   @unique
+  coupon        Coupon?   @relation(fields: [couponId], references: [id])
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  discountType   String    @default("FIXED") // FIXED, PERCENTAGE
+  discountValue  Decimal?  @default(0)
+  productId      String?   // Optional: only valid for this product
+  product        Product?  @relation(fields: [productId], references: [id])
+  categoryId     String?   // Optional: only valid for this category
+  category       Category? @relation(fields: [categoryId], references: [id])
+  isUsed         Boolean   @default(false)
+  order          Order?
+  createdAt      DateTime  @default(now())
+  usedAt         DateTime?
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  content   String?
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

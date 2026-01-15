@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  geekfaka:
+    container_name: geekfaka-app
+    image: ghcr.io/ddmww/geekfaka:latest
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://geekfaka_user:your_password_here@mysql:3306/geekfaka
+      - NEXT_PUBLIC_URL=http://localhost:3000
+      - ADMIN_PASSWORD=admin
+      - COOKIE_NAME=geekfaka_session
+      - JWT_SECRET=change_me_to_a_random_string # JWT 签名密钥
+      - COUPON_API_KEY=geekfaka_default_secret_key # 批量创建优惠码的 API KEY
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: geekfaka-mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=geekfaka_root_secret
+      - MYSQL_DATABASE=geekfaka
+      - MYSQL_USER=geekfaka_user
+      - MYSQL_PASSWORD=your_password_here
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
