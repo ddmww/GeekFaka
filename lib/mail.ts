@@ -81,56 +81,72 @@ export async function sendOrderEmail(orderNo: string) {
     const emailSubject = `[${siteTitle}] 您的订单已发货 - ${order.product.name}`;
     const emailBody = `尊敬的客户：\n\n您的订单 ${orderNo} 已支付成功，感谢您的购买！\n\n商品名称：${order.product.name}\n购买数量：${order.quantity}\n支付金额：¥${Number(order.totalAmount).toFixed(2)}\n\n您的卡密信息如下：\n--------------------------${licenseList}\n--------------------------\n\n您可以随时访问以下链接查询订单详情：\n${process.env.NEXT_PUBLIC_URL}/orders/${orderNo}\n\n如有任何问题，请联系在线客服。`;
 
-    // Strategy 1: Aliyun (SMTP)
-    if (config.aliyun_enabled === 'true' && config.aliyun_smtp_user) {
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: config.aliyun_smtp_host || "smtpdm.aliyun.com",
-        port: parseInt(config.aliyun_smtp_port || "465"),
-        secure: true, // true for 465, false for other ports
-        auth: {
-          user: config.aliyun_smtp_user,
-          pass: config.aliyun_smtp_pass,
-        },
-      });
+    // --- ATOMIC CHECK: Prevent Duplicate Emails ---
+    // Optimistically mark as sent. If this fails (count 0), it means another process beat us to it.
+    const updateResult = await prisma.order.updateMany({
+      where: {
+        id: order.id,
+        emailSent: false
+      },
+      data: { emailSent: true }
+    });
 
-      await transporter.sendMail({
-        from: config.aliyun_from_email || config.aliyun_smtp_user,
-        to: order.email,
-        subject: emailSubject,
-        text: emailBody,
-      });
-
-      log.info({ orderNo, provider: "Aliyun" }, "Order email sent successfully");
-      // Mark as sent
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { emailSent: true }
-      });
+    if (updateResult.count === 0) {
+      log.info({ orderNo }, "Email already sending/sent by another process, skipping");
       return;
     }
 
-    // Strategy 2: Resend
-    if (config.resend_enabled === 'true' && config.resend_api_key) {
-      const resend = new Resend(config.resend_api_key);
-      const { data, error } = await resend.emails.send({
-        from: config.resend_from_email || 'onboarding@resend.dev',
-        to: order.email,
-        subject: emailSubject,
-        text: emailBody,
-      });
-
-      if (error) {
-        log.error({ error, orderNo }, "Failed to send email via Resend");
-      } else {
-        log.info({ data, orderNo }, "Order email sent successfully");
-        // Mark as sent
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { emailSent: true }
+    try {
+      // Strategy 1: Aliyun (SMTP)
+      if (config.aliyun_enabled === 'true' && config.aliyun_smtp_user) {
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransport({
+          host: config.aliyun_smtp_host || "smtpdm.aliyun.com",
+          port: parseInt(config.aliyun_smtp_port || "465"),
+          secure: true, // true for 465, false for other ports
+          auth: {
+            user: config.aliyun_smtp_user,
+            pass: config.aliyun_smtp_pass,
+          },
         });
+
+        await transporter.sendMail({
+          from: config.aliyun_from_email || config.aliyun_smtp_user,
+          to: order.email,
+          subject: emailSubject,
+          text: emailBody,
+        });
+
+        log.info({ orderNo, provider: "Aliyun" }, "Order email sent successfully");
+        return;
       }
-      return;
+
+      // Strategy 2: Resend
+      if (config.resend_enabled === 'true' && config.resend_api_key) {
+        const resend = new Resend(config.resend_api_key);
+        const { data, error } = await resend.emails.send({
+          from: config.resend_from_email || 'onboarding@resend.dev',
+          to: order.email,
+          subject: emailSubject,
+          text: emailBody,
+        });
+
+        if (error) {
+          log.error({ error, orderNo }, "Failed to send email via Resend");
+          throw new Error("Resend failed"); // Trigger revert
+        } else {
+          log.info({ data, orderNo }, "Order email sent successfully");
+        }
+        return;
+      }
+    } catch (e) {
+      // Revert emailSent flag if sending failed so it can be retried manually or by job
+      log.error({ err: e, orderNo }, "Email sending failed, reverting emailSent status");
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { emailSent: false }
+      });
+      throw e;
     }
 
   } catch (err) {
