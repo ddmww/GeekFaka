@@ -45,22 +45,33 @@ export async function POST(req: Request) {
         where: { code: couponCode.trim().toUpperCase() }
       });
 
-      if (!coupon || coupon.isUsed) {
-        return NextResponse.json({ error: "优惠码无效或已被使用" }, { status: 400 });
+      if (!coupon) {
+        return NextResponse.json({ error: "优惠码无效" }, { status: 400 });
+      }
+
+      const now = new Date();
+      if (coupon.validFrom && now < coupon.validFrom) {
+        return NextResponse.json({ error: "优惠码尚未生效" }, { status: 400 });
+      }
+      if (coupon.validUntil && now > coupon.validUntil) {
+        return NextResponse.json({ error: "优惠码已过期" }, { status: 400 });
+      }
+      if (!coupon.isReusable && coupon.isUsed) {
+        return NextResponse.json({ error: "该优惠码已被使用" }, { status: 400 });
       }
 
       // Check product binding
       if (coupon.productId && coupon.productId !== productId) {
         return NextResponse.json({ error: "该优惠码不适用于此商品" }, { status: 400 });
       }
-      
+
       const subtotal = Number(product.price) * quantity;
       if (coupon.discountType === "PERCENTAGE") {
         discountAmount = subtotal * (Number(coupon.discountValue) / 100);
       } else {
         discountAmount = Number(coupon.discountValue);
       }
-      
+
       validCouponId = coupon.id;
     }
 
@@ -74,10 +85,19 @@ export async function POST(req: Request) {
 
     const order = await prisma.$transaction(async (tx) => {
       if (validCouponId) {
-        await tx.coupon.update({
-          where: { id: validCouponId },
-          data: { isUsed: true, usedAt: new Date() }
-        });
+        // Only mark as used if NOT reusable. For reusable, just update timestamp.
+        const currentCoupon = await tx.coupon.findUnique({ where: { id: validCouponId } });
+        if (currentCoupon && !currentCoupon.isReusable) {
+          await tx.coupon.update({
+            where: { id: validCouponId },
+            data: { isUsed: true, usedAt: new Date() }
+          });
+        } else {
+          await tx.coupon.update({
+            where: { id: validCouponId },
+            data: { usedAt: new Date() }
+          });
+        }
       }
 
       return await tx.order.create({
@@ -93,26 +113,26 @@ export async function POST(req: Request) {
         }
       });
     });
-    
+
     log.info({ orderNo, totalAmount }, "Order created in DB");
 
     // 5. Initiate Payment
     try {
       const adapter = getPaymentAdapter(paymentMethod);
       const paymentIntent = await adapter.createPayment(
-        orderNo, 
-        totalAmount, 
+        orderNo,
+        totalAmount,
         `${product.name} x${quantity}`,
         options
       );
-      
+
       log.info({ orderNo, payUrl: paymentIntent.payUrl }, "Payment initiated");
 
-      return NextResponse.json({ 
-        success: true, 
-        orderNo, 
+      return NextResponse.json({
+        success: true,
+        orderNo,
         payUrl: paymentIntent.payUrl,
-        qrCode: paymentIntent.qrCode 
+        qrCode: paymentIntent.qrCode
       });
 
     } catch (payError: any) {

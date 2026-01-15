@@ -15,7 +15,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "无效的优惠码" }, { status: 404 });
     }
 
-    if (coupon.isUsed) {
+    const now = new Date();
+    if (coupon.validFrom && now < coupon.validFrom) {
+      return NextResponse.json({ error: "优惠码尚未生效" }, { status: 400 });
+    }
+    if (coupon.validUntil && now > coupon.validUntil) {
+      return NextResponse.json({ error: "优惠码已过期" }, { status: 400 });
+    }
+
+    if (!coupon.isReusable && coupon.isUsed) {
       return NextResponse.json({ error: "该优惠码已被使用" }, { status: 400 });
     }
 
@@ -34,8 +42,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "该优惠码不适用于此分类下的商品" }, { status: 400 });
       }
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       id: coupon.id,
       code: coupon.code,
       discountType: coupon.discountType,

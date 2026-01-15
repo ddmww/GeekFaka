@@ -6,7 +6,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!await isAuthenticated()) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const { code, discountValue, discountType, productId, categoryId, isUsed } = await req.json();
+    const { code, discountValue, discountType, productId, categoryId, isUsed, isReusable, validFrom, validUntil } = await req.json();
     const { id } = params;
 
     const coupon = await prisma.coupon.update({
@@ -17,7 +17,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         discountType,
         productId: productId === undefined ? undefined : productId,
         categoryId: categoryId === undefined ? undefined : categoryId,
-        isUsed
+        isUsed,
+        isReusable,
+        validFrom: validFrom === null ? null : (validFrom ? new Date(validFrom) : undefined),
+        validUntil: validUntil === null ? null : (validUntil ? new Date(validUntil) : undefined)
       }
     });
 

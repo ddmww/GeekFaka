@@ -20,13 +20,6 @@ interface Product {
   price: string
   stock: number
   enableCoupons: boolean
-  discount?: {
-    type: string
-    value: string
-    isActive: boolean
-    startDate: string
-    endDate: string
-  } | null
 }
 
 interface Category {
@@ -69,28 +62,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
 
   // Derived State
   const selectedChannel = channels.find(c => c.id === paymentMethod)
-
-  // Calculate Base Price (considering product discount)
-  let unitPrice = selectedProduct ? Number(selectedProduct.price) : 0
-  let isDiscounted = false
-
-  if (selectedProduct?.discount && selectedProduct.discount.isActive) {
-    const now = new Date()
-    const start = new Date(selectedProduct.discount.startDate)
-    const end = new Date(selectedProduct.discount.endDate)
-
-    if (now >= start && now <= end) {
-      isDiscounted = true
-      const val = Number(selectedProduct.discount.value)
-      if (selectedProduct.discount.type === "PERCENTAGE") {
-        unitPrice = unitPrice * (1 - val / 100)
-      } else {
-        unitPrice = Math.max(0, unitPrice - val)
-      }
-    }
-  }
-
-  const subtotal = unitPrice * quantity
+  const subtotal = selectedProduct ? Number(selectedProduct.price) * quantity : 0
 
   // Calculate discount
   let discount = 0
@@ -295,31 +267,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                     <div className="flex items-center justify-between">
                       <div className="flex items-baseline gap-1 text-primary">
                         <span className="text-sm font-medium">¥</span>
-                        <span className="text-3xl font-bold tracking-tight">
-                          {(() => {
-                            let price = Number(product.price)
-                            let hasDiscount = false
-                            if (product.discount && product.discount.isActive) {
-                              const now = new Date()
-                              if (now >= new Date(product.discount.startDate) && now <= new Date(product.discount.endDate)) {
-                                hasDiscount = true
-                                if (product.discount.type === "PERCENTAGE") {
-                                  price = price * (1 - Number(product.discount.value) / 100)
-                                } else {
-                                  price = Math.max(0, price - Number(product.discount.value))
-                                }
-                              }
-                            }
-                            return price.toFixed(2)
-                          })()}
-                        </span>
-                        {product.discount && product.discount.isActive &&
-                          new Date() >= new Date(product.discount.startDate) &&
-                          new Date() <= new Date(product.discount.endDate) && (
-                            <span className="ml-1 text-sm text-muted-foreground line-through decoration-destructive/50">
-                              ¥{Number(product.price).toFixed(2)}
-                            </span>
-                          )}
+                        <span className="text-3xl font-bold tracking-tight">{Number(product.price).toFixed(2)}</span>
                       </div>
                       <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="px-3 py-1">
                         {product.stock > 0 ? (
@@ -358,8 +306,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
                 <DialogTitle className="text-2xl font-bold">{selectedProduct?.name}</DialogTitle>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary" className="text-primary bg-primary/10 border-primary/20">
-                    单价 ¥{unitPrice.toFixed(2)}
-                    {isDiscounted && <span className="ml-1 line-through opacity-50 text-xs">¥{Number(selectedProduct?.price).toFixed(2)}</span>}
+                    单价 ¥{Number(selectedProduct?.price).toFixed(2)}
                   </Badge>
                   <Badge variant="outline">
                     库存 {selectedProduct?.stock}

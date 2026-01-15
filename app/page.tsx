@@ -22,7 +22,6 @@ export default async function Home() {
           products: {
             where: { isActive: true },
             include: {
-              discount: true,
               _count: {
                 select: { licenses: { where: { status: "AVAILABLE" } } }
               }
@@ -30,23 +29,37 @@ export default async function Home() {
           }
         }
       }),
-      // ...
-      // ...
-      products: cat.products.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        price: p.price.toString(),
-        stock: p._count.licenses,
-        enableCoupons: p.enableCoupons ?? true,
-        discount: p.discount ? {
-          type: p.discount.type,
-          value: p.discount.value.toString(),
-          isActive: p.discount.isActive,
-          startDate: p.discount.startDate.toISOString(),
-          endDate: p.discount.endDate.toISOString()
-        } : null
-      }))
+      prisma.systemSetting.findUnique({ where: { key: "site_contact_info" } }),
+      prisma.systemSetting.findUnique({ where: { key: "site_announcement" } }),
+      prisma.article.findMany({
+        where: { isVisible: true },
+        select: { title: true, slug: true },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.systemSetting.findUnique({ where: { key: "site_title" } })
+    ]);
+
+    categoriesData = categoriesRes;
+    contactInfo = contactRes;
+    announcement = announceRes;
+    articles = articlesRes;
+    if (titleRes?.value) siteTitle = titleRes.value;
+
+  } catch (error) {
+    console.warn("Failed to fetch homepage data (likely during build):", error);
+  }
+
+  const categories = categoriesData.map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    products: cat.products.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: p.price.toString(),
+      stock: p._count.licenses,
+      enableCoupons: p.enableCoupons ?? true
+    }))
   }));
   return (
     <main className="min-h-screen bg-background dark text-foreground selection:bg-primary selection:text-primary-foreground flex flex-col">

@@ -49,25 +49,8 @@ model Product {
   
   isActive       Boolean   @default(true)
   enableCoupons  Boolean   @default(true)
-  
-  discountId     String?
-  discount       Discount? @relation(fields: [discountId], references: [id])
-
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-}
-
-model Discount {
-  id          String    @id @default(cuid())
-  name        String
-  type        String    @default("PERCENTAGE") // PERCENTAGE, FIXED
-  value       Decimal
-  startDate   DateTime
-  endDate     DateTime
-  isActive    Boolean   @default(true)
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
 }
 
 model License {
@@ -95,7 +78,7 @@ model Order {
   paymentMethod String?
   paidAt        DateTime?
   emailSent     Boolean   @default(false)
-  couponId      String?   @unique
+  couponId      String?   // Removed @unique to allow reusable coupons
   coupon        Coupon?   @relation(fields: [couponId], references: [id])
   
   createdAt     DateTime  @default(now())
@@ -111,10 +94,15 @@ model Coupon {
   product        Product?  @relation(fields: [productId], references: [id])
   categoryId     String?   // Optional: only valid for this category
   category       Category? @relation(fields: [categoryId], references: [id])
-  isUsed         Boolean   @default(false)
-  order          Order?
+  
+  isUsed         Boolean   @default(false) // Still valid for single-use coupons
+  isReusable     Boolean   @default(false) // Toggle for unlimited reuse
+  validFrom      DateTime? 
+  validUntil     DateTime?
+
+  orders         Order[]
   createdAt      DateTime  @default(now())
-  usedAt         DateTime?
+  usedAt         DateTime? // Last used time
 }
 
 model Article {

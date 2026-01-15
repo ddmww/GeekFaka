@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Plus, Trash2, Ticket, Loader2, CheckCircle2, XCircle, Percent, Coins, Edit, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +33,9 @@ interface Coupon {
   createdAt: string
   usedAt: string | null
   order?: { orderNo: string }
+  isReusable: boolean
+  validFrom: string | null
+  validUntil: string | null
 }
 
 export default function CouponsPage() {
@@ -42,7 +45,7 @@ export default function CouponsPage() {
   const [loading, setLoading] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null)
-  
+
   // Pagination State
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -55,7 +58,10 @@ export default function CouponsPage() {
     discountType: "FIXED" as "FIXED" | "PERCENTAGE",
     scopeType: "ALL" as "ALL" | "PRODUCT" | "CATEGORY",
     productId: "",
-    categoryId: ""
+    categoryId: "",
+    isReusable: false,
+    validFrom: "",
+    validUntil: ""
   })
   const [saving, setSaving] = useState(false)
 
@@ -77,10 +83,23 @@ export default function CouponsPage() {
         discountType: editingCoupon.discountType,
         scopeType,
         productId: editingCoupon.productId || "",
-        categoryId: editingCoupon.categoryId || ""
+        categoryId: editingCoupon.categoryId || "",
+        isReusable: editingCoupon.isReusable ?? false,
+        validFrom: editingCoupon.validFrom ? new Date(editingCoupon.validFrom).toISOString().slice(0, 16) : "",
+        validUntil: editingCoupon.validUntil ? new Date(editingCoupon.validUntil).toISOString().slice(0, 16) : ""
       })
     } else {
-      setFormData({ code: "", discountValue: "", discountType: "FIXED", scopeType: "ALL", productId: "", categoryId: "" })
+      setFormData({
+        code: "",
+        discountValue: "",
+        discountType: "FIXED",
+        scopeType: "ALL",
+        productId: "",
+        categoryId: "",
+        isReusable: false,
+        validFrom: "",
+        validUntil: ""
+      })
     }
   }, [editingCoupon])
 
@@ -136,6 +155,9 @@ export default function CouponsPage() {
         discountValue: formData.discountValue,
         productId: formData.scopeType === "PRODUCT" ? formData.productId : null,
         categoryId: formData.scopeType === "CATEGORY" ? formData.categoryId : null,
+        isReusable: formData.isReusable,
+        validFrom: formData.validFrom || null,
+        validUntil: formData.validUntil || null,
       }
 
       const res = await fetch(url, {
@@ -227,8 +249,8 @@ export default function CouponsPage() {
                       )}
                     </TableCell>
                     <TableCell className="font-bold">
-                      {coupon.discountType === "PERCENTAGE" 
-                        ? `${Number(coupon.discountValue).toFixed(0)}%` 
+                      {coupon.discountType === "PERCENTAGE"
+                        ? `${Number(coupon.discountValue).toFixed(0)}%`
                         : `¥${Number(coupon.discountValue).toFixed(2)}`}
                     </TableCell>
                     <TableCell>
@@ -249,6 +271,18 @@ export default function CouponsPage() {
                         <Badge variant="default" className="bg-green-600">
                           可使用
                         </Badge>
+                      )}
+
+                      {coupon.isReusable && (
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-[10px] border-blue-500 text-blue-500">无限复用</Badge>
+                        </div>
+                      )}
+                      {(coupon.validFrom || coupon.validUntil) && (
+                        <div className="mt-1 text-[10px] text-muted-foreground">
+                          {coupon.validFrom && <div>起: {new Date(coupon.validFrom).toLocaleDateString()}</div>}
+                          {coupon.validUntil && <div>止: {new Date(coupon.validUntil).toLocaleDateString()}</div>}
+                        </div>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -304,14 +338,14 @@ export default function CouponsPage() {
               创建一个一次性的折扣券。
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>优惠码内容</Label>
               <div className="flex gap-2">
-                <Input 
-                  value={formData.code} 
-                  onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })} 
+                <Input
+                  value={formData.code}
+                  onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                   placeholder="例如：DISCOUNT10"
                   className="font-mono"
                 />
@@ -322,8 +356,8 @@ export default function CouponsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>优惠类型</Label>
-                <Select 
-                  value={formData.discountType} 
+                <Select
+                  value={formData.discountType}
                   onValueChange={(val: any) => setFormData({ ...formData, discountType: val })}
                 >
                   <SelectTrigger>
@@ -337,11 +371,11 @@ export default function CouponsPage() {
               </div>
               <div className="grid gap-2">
                 <Label>{formData.discountType === "FIXED" ? "金额 (元)" : "比例 (%)"}</Label>
-                <Input 
+                <Input
                   type="number"
                   step="0.01"
-                  value={formData.discountValue} 
-                  onChange={e => setFormData({ ...formData, discountValue: e.target.value })} 
+                  value={formData.discountValue}
+                  onChange={e => setFormData({ ...formData, discountValue: e.target.value })}
                   placeholder={formData.discountType === "FIXED" ? "5.00" : "10"}
                 />
               </div>
@@ -349,8 +383,8 @@ export default function CouponsPage() {
 
             <div className="grid gap-2">
               <Label>适用范围</Label>
-              <Select 
-                value={formData.scopeType} 
+              <Select
+                value={formData.scopeType}
                 onValueChange={(val: any) => setFormData({ ...formData, scopeType: val })}
               >
                 <SelectTrigger>
@@ -367,8 +401,8 @@ export default function CouponsPage() {
             {formData.scopeType === "PRODUCT" && (
               <div className="grid gap-2">
                 <Label>选择商品</Label>
-                <Select 
-                  value={formData.productId} 
+                <Select
+                  value={formData.productId}
                   onValueChange={(val) => setFormData({ ...formData, productId: val })}
                 >
                   <SelectTrigger>
@@ -386,8 +420,8 @@ export default function CouponsPage() {
             {formData.scopeType === "CATEGORY" && (
               <div className="grid gap-2">
                 <Label>选择分类</Label>
-                <Select 
-                  value={formData.categoryId} 
+                <Select
+                  value={formData.categoryId}
                   onValueChange={(val) => setFormData({ ...formData, categoryId: val })}
                 >
                   <SelectTrigger>
@@ -401,6 +435,36 @@ export default function CouponsPage() {
                 </Select>
               </div>
             )}
+
+            <div className="flex items-center justify-between border p-3 rounded-md">
+              <div className="space-y-0.5">
+                <Label className="text-base">无限复用</Label>
+                <p className="text-xs text-muted-foreground">开启后，优惠码可被多次使用（不限制使用次数）</p>
+              </div>
+              <Switch
+                checked={formData.isReusable}
+                onCheckedChange={(checked: boolean) => setFormData({ ...formData, isReusable: checked })}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>生效时间 (留空即立即生效)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.validFrom}
+                  onChange={e => setFormData({ ...formData, validFrom: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>过期时间 (留空即永不过期)</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.validUntil}
+                  onChange={e => setFormData({ ...formData, validUntil: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
