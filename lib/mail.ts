@@ -65,7 +65,7 @@ export async function sendOrderEmail(orderNo: string) {
       }
     });
 
-    const config = settings.reduce((acc: Record<string, string>, curr) => {
+    const config = settings.reduce((acc: Record<string, string>, curr: { key: string; value: string }) => {
       acc[curr.key] = curr.value;
       return acc;
     }, {} as Record<string, string>);
