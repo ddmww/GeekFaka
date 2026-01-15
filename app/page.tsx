@@ -12,34 +12,39 @@ export default async function Home() {
   let announcement: any = null;
   let articles: any[] = [];
 
+  let siteTitle = "GeekFaka";
+
   try {
-    categoriesData = await prisma.category.findMany({
-      orderBy: { priority: "desc" },
-      include: {
-        products: {
-          where: { isActive: true },
-          include: {
-            _count: {
-              select: { licenses: { where: { status: "AVAILABLE" } } }
+    const [categoriesRes, contactRes, announceRes, articlesRes, titleRes] = await Promise.all([
+      prisma.category.findMany({
+        orderBy: { priority: "desc" },
+        include: {
+          products: {
+            where: { isActive: true },
+            include: {
+              _count: {
+                select: { licenses: { where: { status: "AVAILABLE" } } }
+              }
             }
           }
         }
-      }
-    });
+      }),
+      prisma.systemSetting.findUnique({ where: { key: "site_contact_info" } }),
+      prisma.systemSetting.findUnique({ where: { key: "site_announcement" } }),
+      prisma.article.findMany({
+        where: { isVisible: true },
+        select: { title: true, slug: true },
+        orderBy: { createdAt: "desc" }
+      }),
+      prisma.systemSetting.findUnique({ where: { key: "site_title" } })
+    ]);
 
-    contactInfo = await prisma.systemSetting.findUnique({
-      where: { key: "site_contact_info" },
-    });
+    categoriesData = categoriesRes;
+    contactInfo = contactRes;
+    announcement = announceRes;
+    articles = articlesRes;
+    if (titleRes?.value) siteTitle = titleRes.value;
 
-    announcement = await prisma.systemSetting.findUnique({
-      where: { key: "site_announcement" },
-    });
-
-    articles = await prisma.article.findMany({
-      where: { isVisible: true },
-      select: { title: true, slug: true },
-      orderBy: { createdAt: "desc" }
-    });
   } catch (error) {
     console.warn("Failed to fetch homepage data (likely during build):", error);
   }
@@ -58,7 +63,7 @@ export default async function Home() {
   }));
   return (
     <main className="min-h-screen bg-background dark text-foreground selection:bg-primary selection:text-primary-foreground flex flex-col">
-      <Navbar />
+      <Navbar title={siteTitle} />
 
       {/* Dynamic Announcement (Bar + Popup) */}
       <Announcement content={announcement?.value} />

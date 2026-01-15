@@ -6,10 +6,27 @@ import { CustomerService } from "@/components/customer-service";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "GeekFaka - 自动发货平台",
-  description: "24小时自动发货，安全快捷",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  let title = "GeekFaka - 自动发货平台";
+  let description = "24小时自动发货，安全快捷";
+
+  try {
+    const [titleSetting, descSetting] = await Promise.all([
+      prisma.systemSetting.findUnique({ where: { key: "site_title" } }),
+      prisma.systemSetting.findUnique({ where: { key: "site_description" } })
+    ]);
+
+    if (titleSetting?.value) title = titleSetting.value;
+    if (descSetting?.value) description = descSetting.value;
+  } catch (e) {
+    console.warn("Failed to fetch metadata (likely during build)");
+  }
+
+  return {
+    title,
+    description,
+  };
+}
 
 export default async function RootLayout({
   children,
