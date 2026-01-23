@@ -16,6 +16,8 @@ services:
       - COUPON_API_KEY=geekfaka_default_secret_key # 批量创建优惠码的 API KEY
     depends_on:
       - mysql
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   mysql:
     image: mysql:8.0
