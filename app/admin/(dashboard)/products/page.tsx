@@ -441,6 +441,18 @@ export default function ProductsPage() {
                   <p className="text-[10px] text-muted-foreground">影响用户查收卡密时的展示方式</p>
                 </div>
 
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">排序优先级</Label>
+                  <Input
+                    id="priority"
+                    type="number"
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    placeholder="0"
+                  />
+                  <p className="text-[10px] text-muted-foreground">数字越大越靠前 (默认0)</p>
+                </div>
+
                 <div className="flex items-center justify-between border p-3 rounded-md">
                   <div className="space-y-0.5">
                     <Label className="text-base">启用优惠码</Label>
