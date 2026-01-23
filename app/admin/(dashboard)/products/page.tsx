@@ -58,7 +58,6 @@ export default function ProductsPage() {
     description: "",
     price: "",
     categoryId: "",
-    categoryId: "",
     deliveryFormat: "SINGLE",
     enableCoupons: true,
     priority: "0"
@@ -108,7 +107,8 @@ export default function ProductsPage() {
         price: product.price,
         categoryId: product.categoryId,
         deliveryFormat: product.deliveryFormat || "SINGLE",
-        enableCoupons: product.enableCoupons ?? true
+        enableCoupons: product.enableCoupons ?? true,
+        priority: (product.priority || 0).toString()
       })
     } else {
       setEditingProduct(null)
@@ -118,7 +118,8 @@ export default function ProductsPage() {
         price: "",
         categoryId: categories[0]?.id || "",
         deliveryFormat: "SINGLE",
-        enableCoupons: true
+        enableCoupons: true,
+        priority: "0"
       })
     }
     setIsDialogOpen(true)
@@ -134,7 +135,11 @@ export default function ProductsPage() {
     try {
       const res = await fetch(url, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          priority: parseInt(formData.priority) || 0
+        }),
         headers: { "Content-Type": "application/json" }
       })
       if (res.ok) {

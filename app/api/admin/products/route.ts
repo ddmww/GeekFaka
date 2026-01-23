@@ -28,30 +28,29 @@ export async function GET(req: Request) {
             select: { licenses: { where: { status: "AVAILABLE" } } }
           }
         },
-      },
         orderBy: [
-        { priority: "desc" },
-        { createdAt: "desc" }
-      ],
+          { priority: "desc" },
+          { createdAt: "desc" }
+        ],
         skip,
         take: limit
       }),
-  prisma.product.count({ where })
+      prisma.product.count({ where })
     ]);
 
-  return NextResponse.json({
-    products,
-    pagination: {
-      total,
-      pages: Math.ceil(total / limit),
-      page,
-      limit
-    }
-  });
-} catch (error) {
-  log.error({ err: error }, "Failed to fetch products");
-  return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
-}
+    return NextResponse.json({
+      products,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        page,
+        limit
+      }
+    });
+  } catch (error) {
+    log.error({ err: error }, "Failed to fetch products");
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+  }
 }
 
 // Create Product
