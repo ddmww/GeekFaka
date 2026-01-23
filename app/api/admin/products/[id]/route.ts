@@ -28,15 +28,14 @@ export async function PATCH(
         enableCoupons,
         priority: priority !== undefined ? parseInt(priority) : undefined
       }
-    }
     });
 
-  log.info({ productId: id, changes: { name, price, isActive, deliveryFormat } }, "Product updated");
-  return NextResponse.json(product);
-} catch (error) {
-  log.error({ err: error, productId: params.id }, "Failed to update product");
-  return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
-}
+    log.info({ productId: id, changes: { name, price, isActive, deliveryFormat } }, "Product updated");
+    return NextResponse.json(product);
+  } catch (error) {
+    log.error({ err: error, productId: params.id }, "Failed to update product");
+    return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
+  }
 }
 
 // Delete Product
