@@ -28,26 +28,30 @@ export async function GET(req: Request) {
             select: { licenses: { where: { status: "AVAILABLE" } } }
           }
         },
-        orderBy: { createdAt: "desc" },
+      },
+        orderBy: [
+        { priority: "desc" },
+        { createdAt: "desc" }
+      ],
         skip,
         take: limit
       }),
-      prisma.product.count({ where })
+  prisma.product.count({ where })
     ]);
 
-    return NextResponse.json({
-      products,
-      pagination: {
-        total,
-        pages: Math.ceil(total / limit),
-        page,
-        limit
-      }
-    });
-  } catch (error) {
-    log.error({ err: error }, "Failed to fetch products");
-    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
-  }
+  return NextResponse.json({
+    products,
+    pagination: {
+      total,
+      pages: Math.ceil(total / limit),
+      page,
+      limit
+    }
+  });
+} catch (error) {
+  log.error({ err: error }, "Failed to fetch products");
+  return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+}
 }
 
 // Create Product
@@ -55,7 +59,7 @@ export async function POST(req: Request) {
   if (!await isAuthenticated()) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const { name, description, price, categoryId, deliveryFormat, enableCoupons } = await req.json();
+    const { name, description, price, categoryId, deliveryFormat, enableCoupons, priority } = await req.json();
 
     const product = await prisma.product.create({
       data: {
@@ -64,7 +68,8 @@ export async function POST(req: Request) {
         price,
         categoryId,
         deliveryFormat: deliveryFormat || "SINGLE",
-        enableCoupons: enableCoupons ?? true
+        enableCoupons: enableCoupons ?? true,
+        priority: priority ? parseInt(priority) : 0
       }
     });
 

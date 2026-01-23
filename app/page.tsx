@@ -21,6 +21,10 @@ export default async function Home() {
         include: {
           products: {
             where: { isActive: true },
+            orderBy: [
+              { priority: "desc" },
+              { createdAt: "desc" }
+            ],
             include: {
               _count: {
                 select: { licenses: { where: { status: "AVAILABLE" } } }

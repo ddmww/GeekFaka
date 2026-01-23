@@ -28,6 +28,7 @@ interface Product {
   category: Category
   isActive: boolean
   enableCoupons: boolean
+  priority: number
   deliveryFormat: string
   _count: {
     licenses: number
@@ -57,8 +58,10 @@ export default function ProductsPage() {
     description: "",
     price: "",
     categoryId: "",
+    categoryId: "",
     deliveryFormat: "SINGLE",
-    enableCoupons: true
+    enableCoupons: true,
+    priority: "0"
   })
 
   useEffect(() => {
