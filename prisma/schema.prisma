@@ -77,10 +77,11 @@ model Order {
   quantity      Int       @default(1)
   licenses      License[]
   paymentMethod String?
+  epayTradeNo   String?   @unique // Upstream EPay transaction/order number
   paidAt        DateTime?
   emailSent     Boolean   @default(false)
   couponId      String?   // Removed @unique to allow reusable coupons
-  coupon        Coupon?   @relation(fields: [couponId], references: [id], map: "Order_couponId_fkey_v2")
+  coupon        Coupon?   @relation(fields: [couponId], references: [id])
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

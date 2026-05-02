@@ -47,10 +47,11 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.14",
+    "@next/eslint-plugin-next": "^14.2.35",
     "@prisma/client": "5.22.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.14",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.4.23",

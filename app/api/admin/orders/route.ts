@@ -19,6 +19,7 @@ export async function GET(req: Request) {
   if (search) {
     where.OR = [
       { orderNo: { contains: search } },
+      { epayTradeNo: { contains: search } },
       { email: { contains: search } }
     ];
   }

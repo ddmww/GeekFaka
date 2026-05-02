@@ -8,8 +8,13 @@ export async function GET(
   const { orderNo } = params;
 
   try {
-    const order = await prisma.order.findUnique({
-      where: { orderNo },
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNo },
+          { epayTradeNo: orderNo }
+        ]
+      },
       include: {
         product: {
           select: { name: true, description: true, deliveryFormat: true }

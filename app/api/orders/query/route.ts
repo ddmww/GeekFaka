@@ -14,9 +14,14 @@ export async function GET(req: Request) {
   const keyword = q.trim();
 
   try {
-    // 1. Try to find by Order No (Exact match)
-    const orderByNo = await prisma.order.findUnique({
-      where: { orderNo: keyword },
+    // 1. Try to find by local order no or upstream EPay trade no (Exact match)
+    const orderByNo = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNo: keyword },
+          { epayTradeNo: keyword }
+        ]
+      },
       select: {
         orderNo: true,
         status: true,

@@ -45,6 +45,12 @@ async function processNotification(data: any, req?: Request) {
         }
         
         if (order.status === "PAID") {
+            if (callbackData.transactionId && !order.epayTradeNo) {
+              await tx.order.update({
+                where: { id: order.id },
+                data: { epayTradeNo: callbackData.transactionId }
+              });
+            }
             log.info("Order already paid, skipping idempotency check");
             return; 
         }
@@ -90,6 +96,7 @@ async function processNotification(data: any, req?: Request) {
           data: { 
             status: "PAID",
             paymentMethod: "epay",
+            epayTradeNo: callbackData.transactionId,
             paidAt: new Date()
           }
         });
