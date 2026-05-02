@@ -14,6 +14,7 @@ import React from "react"
 interface Order {
   id: string
   orderNo: string
+  epayTradeNo: string | null
   email: string | null
   totalAmount: any
   status: string
@@ -302,6 +303,10 @@ export default function OrderPage({ params }: { params: { orderNo: string } }) {
                 <div className="space-y-1">
                    <span className="text-muted-foreground block uppercase text-[10px] font-bold tracking-widest">联系方式</span>
                    <span className="font-medium">{order.email || "-"}</span>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <span className="text-muted-foreground block uppercase text-[10px] font-bold tracking-widest">易支付订单号</span>
+                  <span className="font-mono text-xs break-all">{order.epayTradeNo || "-"}</span>
                 </div>
              </div>
 

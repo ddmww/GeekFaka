@@ -77,13 +77,13 @@ export function OrderLookup() {
         <DialogHeader>
           <DialogTitle>订单查询</DialogTitle>
           <DialogDescription>
-            输入下单时填写的联系方式（邮箱/QQ/手机号）或订单号查询。
+            输入下单时填写的联系方式（邮箱/QQ/手机号）、订单号或易支付订单号查询。
           </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSearch} className="flex gap-2 mt-2">
           <Input 
-            placeholder="联系方式 / 订单号" 
+            placeholder="联系方式 / 订单号 / 易支付订单号"
             value={query} 
             onChange={e => setQuery(e.target.value)}
           />

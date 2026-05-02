@@ -107,7 +107,7 @@ async function processNotification(data: any, req?: Request) {
       sendOrderEmail(callbackData.orderNo).catch(e => log.error({ err: e }, "Email background task failed"));
     }
 
-    return new NextResponse("success");
+    return new NextResponse("SUCCESS");
   } catch (error) {
     logger.error({ err: error }, "Payment notification processing failed");
     return new NextResponse("fail", { status: 400 });

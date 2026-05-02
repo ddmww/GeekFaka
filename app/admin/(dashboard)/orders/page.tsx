@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface Order {
   id: string
   orderNo: string
+  epayTradeNo: string | null
   email: string
   totalAmount: string
   status: string
@@ -168,7 +169,7 @@ export default function OrdersPage() {
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <form onSubmit={handleSearch} className="flex gap-2 w-full max-w-sm">
             <Input 
-              placeholder="搜索订单号或邮箱..." 
+              placeholder="搜索订单号、易支付订单号或邮箱..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="bg-background/50"
@@ -239,6 +240,7 @@ export default function OrdersPage() {
                     <TableCell className="font-mono text-xs">
                       <div className="flex flex-col gap-1">
                          <span className="font-bold">{order.orderNo}</span>
+                         <span className="text-muted-foreground scale-90 origin-left">EPay: {order.epayTradeNo || "-"}</span>
                          <span className="text-muted-foreground scale-90 origin-left">{order.email}</span>
                       </div>
                     </TableCell>

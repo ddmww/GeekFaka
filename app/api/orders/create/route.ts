@@ -127,7 +127,14 @@ export async function POST(req: Request) {
         options
       );
 
-      log.info({ orderNo, payUrl: paymentIntent.payUrl }, "Payment initiated");
+      if (paymentIntent.transactionId) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { epayTradeNo: paymentIntent.transactionId }
+        });
+      }
+
+      log.info({ orderNo, payUrl: paymentIntent.payUrl, transactionId: paymentIntent.transactionId }, "Payment initiated");
 
       return NextResponse.json({
         success: true,

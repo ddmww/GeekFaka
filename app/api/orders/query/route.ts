@@ -49,6 +49,13 @@ export async function GET(req: Request) {
       }
     });
 
+    if (ordersByEmail.length === 0) {
+      console.warn("Order query returned no results", {
+        keyword,
+        searchedFields: ["orderNo", "epayTradeNo", "email"]
+      });
+    }
+
     return NextResponse.json(ordersByEmail);
   } catch (error) {
     console.error("Order query error:", error);

@@ -113,6 +113,25 @@ export class EpayProvider implements PaymentAdapter {
     return this.signType === "RSA" ? this.signRSA(params) : this.signMD5(params);
   }
 
+  private getSubmitUrl(): string {
+    if (this.apiUrl.endsWith("submit.php")) {
+      return this.apiUrl;
+    }
+
+    return `${this.apiUrl}submit.php`;
+  }
+
+  private extractTradeNo(payUrl?: string): string | undefined {
+    if (!payUrl) return undefined;
+
+    try {
+      return new URL(payUrl).searchParams.get("trade_no") || undefined;
+    } catch {
+      const match = payUrl.match(/[?&]trade_no=([^&#]+)/);
+      return match ? decodeURIComponent(match[1]) : undefined;
+    }
+  }
+
   async createPayment(
     orderNo: string, 
     amount: number, 
@@ -146,8 +165,42 @@ export class EpayProvider implements PaymentAdapter {
     };
 
     const signature = this.sign(params);
-    const queryString = new URLSearchParams({ ...params, sign: signature }).toString();
-    const payUrl = `${this.apiUrl}submit.php?${queryString}`;
+    const signedParams = { ...params, sign: signature };
+    const queryString = new URLSearchParams(signedParams).toString();
+    const submitUrl = this.getSubmitUrl();
+    const fallbackPayUrl = `${submitUrl}?${queryString}`;
+
+    try {
+      const res = await fetch(submitUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          ...signedParams,
+          return_type: "json"
+        })
+      });
+
+      const result = await res.json();
+      const payUrl = typeof result.data === "string" ? result.data : result.data?.pay_url;
+
+      if (result.code === 1 && payUrl) {
+        const transactionId = this.extractTradeNo(payUrl);
+
+        log.info({ orderNo, amount, type, signType: this.signType, transactionId }, "Payment URL generated");
+
+        return {
+          orderId: orderNo,
+          amount: amount,
+          currency: "CNY",
+          payUrl,
+          transactionId
+        };
+      }
+
+      log.warn({ orderNo, result }, "EPay JSON payment creation failed, falling back to form URL");
+    } catch (error) {
+      log.warn({ err: error, orderNo }, "EPay JSON payment creation errored, falling back to form URL");
+    }
 
     log.info({ orderNo, amount, type, signType: this.signType }, "Payment URL generated");
 
@@ -155,7 +208,7 @@ export class EpayProvider implements PaymentAdapter {
       orderId: orderNo,
       amount: amount,
       currency: "CNY",
-      payUrl: payUrl
+      payUrl: fallbackPayUrl
     };
   }
 
