@@ -59,26 +59,30 @@ export default async function DashboardPage() {
   });
 
   // Group by date
-  const trendMap = new Map<string, number>();
+  const trendMap = new Map<string, { amount: number; orderCount: number }>();
   // Initialize last 7 days with 0
   for (let i = 0; i < 7; i++) {
     const d = new Date(sevenDaysAgo);
     d.setDate(d.getDate() + i);
     // Format label using China locale
     const key = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' });
-    trendMap.set(key, 0);
+    trendMap.set(key, { amount: 0, orderCount: 0 });
   }
 
   recentOrders.forEach(order => {
     if (order.paidAt) {
       const key = order.paidAt.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' });
-      if (trendMap.has(key)) {
-        trendMap.set(key, (trendMap.get(key) || 0) + Number(order.totalAmount));
+      const current = trendMap.get(key);
+      if (current) {
+        trendMap.set(key, {
+          amount: current.amount + Number(order.totalAmount),
+          orderCount: current.orderCount + 1
+        });
       }
     }
   });
 
-  const trendData = Array.from(trendMap.entries()).map(([date, amount]) => ({ date, amount }));
+  const trendData = Array.from(trendMap.entries()).map(([date, stats]) => ({ date, ...stats }));
 
   // 3. Overall Stats
   const productCount = await prisma.product.count();
@@ -172,7 +176,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" /> 
-              近7日收入趋势
+              近7日收入与订单趋势
             </CardTitle>
           </CardHeader>
           <CardContent>
