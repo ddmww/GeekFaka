@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getPaymentAdapter } from "@/lib/payments/registry";
 import { logger } from "@/lib/logger";
 import { sendOrderEmail } from "@/lib/mail";
+import { fulfillPaidOrder } from "@/lib/fulfillment";
 
 export async function GET(req: Request) {
   // EPay notifications are usually GET requests, but verify based on your gateway
@@ -33,75 +34,46 @@ async function processNotification(data: any, req?: Request) {
     log.info({ callbackData }, "Signature verified");
 
     if (callbackData.status === "PAID") {
-       await prisma.$transaction(async (tx) => {
-        const order = await tx.order.findUnique({
-          where: { orderNo: callbackData.orderNo },
-          include: { product: true }
-        });
+      const order = await prisma.order.findUnique({
+        where: { orderNo: callbackData.orderNo },
+        include: { product: true }
+      });
 
-        if (!order) {
-            log.error("Order not found");
-            throw new Error("Order not found");
-        }
-        
-        if (order.status === "PAID") {
-            if (callbackData.transactionId && !order.epayTradeNo) {
-              await tx.order.update({
-                where: { id: order.id },
-                data: { epayTradeNo: callbackData.transactionId }
-              });
-            }
-            log.info("Order already paid, skipping idempotency check");
-            return; 
-        }
+      if (!order) {
+        log.error("Order not found");
+        throw new Error("Order not found");
+      }
 
+      if (order.status === "PAID") {
+        if (callbackData.transactionId && !order.epayTradeNo) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { epayTradeNo: callbackData.transactionId }
+          });
+        }
+        log.info("Order already paid, skipping idempotency check");
+      } else {
         // Check for expiration (30 mins)
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
         if (order.createdAt < thirtyMinutesAgo) {
           log.warn("Payment received for expired order");
-          await tx.order.update({
+          await prisma.order.update({
             where: { id: order.id },
             data: { status: "EXPIRED" }
           });
-          return;
+          return new NextResponse("SUCCESS");
         }
 
-        // --- Standard License Logic ---
-        const licenses = await tx.license.findMany({
-          where: { 
-            productId: order.productId,
-            status: "AVAILABLE"
-          },
-          orderBy: { createdAt: 'asc' }, // FIFO: Use oldest licenses first
-          take: order.quantity
+        const result = await fulfillPaidOrder({
+          orderNo: callbackData.orderNo,
+          paymentMethod: "epay",
+          epayTradeNo: callbackData.transactionId,
         });
 
-        if (licenses.length < order.quantity) {
-          log.error({
-            needed: order.quantity,
-            found: licenses.length
-          }, "Insufficient stock for paid order");
-          // Important: in real world might need to alert admin or refund
-          return; 
+        if (result.fulfilled) {
+          log.info("Order successfully fulfilled");
         }
-
-        const licenseIds = licenses.map(l => l.id);
-        await tx.license.updateMany({
-          where: { id: { in: licenseIds } },
-          data: { status: "SOLD", orderId: order.id }
-        });
-
-        await tx.order.update({
-          where: { id: order.id },
-          data: { 
-            status: "PAID",
-            paymentMethod: "epay",
-            epayTradeNo: callbackData.transactionId,
-            paidAt: new Date()
-          }
-        });
-        log.info("Order successfully fulfilled");
-      });
+      }
 
       // Send Email Notification
       sendOrderEmail(callbackData.orderNo).catch(e => log.error({ err: e }, "Email background task failed"));

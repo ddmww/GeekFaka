@@ -64,6 +64,8 @@ model License {
   order       Order?   @relation(fields: [orderId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([productId, status, orderId, createdAt])
 }
 
 model Order {
@@ -71,7 +73,7 @@ model Order {
   orderNo       String    @unique // Readable order number
   email         String?   // Contact info
   totalAmount   Decimal
-  status        String    @default("PENDING") // PENDING, PAID, FAILED, EXPIRED
+  status        String    @default("PENDING") // PENDING, PROCESSING, PAID, FAILED, EXPIRED
   productId     String
   product       Product   @relation(fields: [productId], references: [id])
   quantity      Int       @default(1)
