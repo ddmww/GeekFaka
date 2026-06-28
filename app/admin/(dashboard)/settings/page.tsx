@@ -60,7 +60,7 @@ const normalizeEpayGateway = (raw: any, index: number): EpayGatewayDraft => {
     id: String(raw?.id || `epay_${index}_${Date.now()}`),
     name: String(raw?.name || (primaryChannel === "alipay" ? "支付宝易支付" : "微信易支付")),
     enabled: raw?.enabled === true || raw?.enabled === "true",
-    channels: channels.length > 0 ? channels : [primaryChannel],
+    channels,
     apiUrl: String(raw?.apiUrl || ""),
     pid: String(raw?.pid || ""),
     key: String(raw?.key || ""),

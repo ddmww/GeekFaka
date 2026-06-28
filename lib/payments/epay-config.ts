@@ -51,7 +51,7 @@ export function normalizeEpayGateway(raw: any, index = 0): EpayGatewayConfig {
     id,
     name: String(raw?.name || getEpayChannelLabel(primaryChannel)).trim() || getEpayChannelLabel(primaryChannel),
     enabled: raw?.enabled === true || raw?.enabled === "true",
-    channels: channels.length > 0 ? channels : [primaryChannel],
+    channels,
     apiUrl: String(raw?.apiUrl || "").trim(),
     pid: String(raw?.pid || "").trim(),
     key: String(raw?.key || ""),
