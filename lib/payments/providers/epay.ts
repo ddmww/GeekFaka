@@ -2,6 +2,7 @@ import { PaymentAdapter, PaymentIntent, PaymentStatus, PaymentCallbackData } fro
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { EpayGatewayConfig, loadEpayGateways, resolveEpaySelection } from "@/lib/payments/epay-config";
 
 const log = logger.child({ module: 'EPayProvider' });
 
@@ -19,20 +20,12 @@ export class EpayProvider implements PaymentAdapter {
 
   constructor() {}
 
-  private async loadConfig() {
+  private async loadSiteUrl() {
     try {
       const settings = await prisma.systemSetting.findMany({
         where: {
           key: {
             in: [
-              "epay_api_url", 
-              "epay_pid", 
-              "epay_key", 
-              "epay_sign_type", 
-              "epay_public_key", 
-              "epay_private_key",
-              "epay_enabled",
-              "epay_channels",
               "site_url"
             ] 
           }
@@ -44,25 +37,27 @@ export class EpayProvider implements PaymentAdapter {
         return acc;
       }, {} as Record<string, string>);
 
-      this.isEnabled = config.epay_enabled === "true";
-      this.apiUrl = config.epay_api_url || "";
-      this.pid = config.epay_pid || "";
-      this.key = config.epay_key || "";
-      this.signType = (config.epay_sign_type as "MD5" | "RSA") || "MD5";
-      this.publicKey = config.epay_public_key || "";
-      this.privateKey = config.epay_private_key || "";
-      
       let url = config.site_url || process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
       if (url.endsWith("/")) url = url.slice(0, -1);
       this.siteUrl = url;
 
-      if (this.apiUrl && !this.apiUrl.endsWith("/")) {
-        this.apiUrl += "/";
-      }
-
     } catch (e) {
       log.error({ err: e }, "Failed to load payment config from DB");
       throw new Error("Payment configuration database error");
+    }
+  }
+
+  private useGateway(gateway: EpayGatewayConfig) {
+    this.isEnabled = gateway.enabled;
+    this.apiUrl = gateway.apiUrl;
+    this.pid = gateway.pid;
+    this.key = gateway.key;
+    this.signType = gateway.signType;
+    this.publicKey = gateway.publicKey;
+    this.privateKey = gateway.privateKey;
+
+    if (this.apiUrl && !this.apiUrl.endsWith("/")) {
+      this.apiUrl += "/";
     }
   }
 
@@ -138,7 +133,16 @@ export class EpayProvider implements PaymentAdapter {
     description: string,
     options?: { channel?: string }
   ): Promise<PaymentIntent> {
-    await this.loadConfig();
+    await this.loadSiteUrl();
+    const gateways = await loadEpayGateways();
+    const selection = resolveEpaySelection(gateways, options?.channel);
+
+    if (!selection) {
+      throw new Error("未配置可用的易支付渠道，请在后台设置");
+    }
+
+    const { gateway, channel } = selection;
+    this.useGateway(gateway);
 
     if (!this.isEnabled) {
       throw new Error("易支付渠道目前已停用，请在后台开启");
@@ -148,7 +152,7 @@ export class EpayProvider implements PaymentAdapter {
       throw new Error("易支付参数未配置，请在后台设置");
     }
 
-    const type = options?.channel || "alipay"; 
+    const type = channel;
     const notifyUrl = `${this.siteUrl}/api/payments/epay/notify`;
     const returnUrl = `${this.siteUrl}/orders/${orderNo}`;
 
@@ -186,7 +190,7 @@ export class EpayProvider implements PaymentAdapter {
       if (result.code === 1 && payUrl) {
         const transactionId = this.extractTradeNo(payUrl);
 
-        log.info({ orderNo, amount, type, signType: this.signType, transactionId }, "Payment URL generated");
+        log.info({ orderNo, amount, type, gatewayId: gateway.id, signType: this.signType, transactionId }, "Payment URL generated");
 
         return {
           orderId: orderNo,
@@ -202,7 +206,7 @@ export class EpayProvider implements PaymentAdapter {
       log.warn({ err: error, orderNo }, "EPay JSON payment creation errored, falling back to form URL");
     }
 
-    log.info({ orderNo, amount, type, signType: this.signType }, "Payment URL generated");
+    log.info({ orderNo, amount, type, gatewayId: gateway.id, signType: this.signType }, "Payment URL generated");
 
     return {
       orderId: orderNo,
@@ -213,7 +217,14 @@ export class EpayProvider implements PaymentAdapter {
   }
 
   async verifyCallback(data: any, headers?: any): Promise<PaymentCallbackData> {
-    await this.loadConfig();
+    const gateways = await loadEpayGateways();
+    const gateway = gateways.find(item => item.pid && String(data?.pid || "") === item.pid) || gateways.find(item => item.enabled);
+
+    if (!gateway) {
+      throw new Error("No EPay gateway configured");
+    }
+
+    this.useGateway(gateway);
     
     if (!this.isEnabled) {
         log.warn("Received callback but payment channel is disabled");
@@ -226,7 +237,7 @@ export class EpayProvider implements PaymentAdapter {
 
     const incomingSignType = (sign_type || this.signType).toUpperCase();
 
-    log.info({ incomingSignType, sign }, "Verifying callback signature");
+    log.info({ incomingSignType, gatewayId: gateway.id }, "Verifying callback signature");
 
     if (incomingSignType === "RSA") {
        if (!this.publicKey) throw new Error("RSA Public Key missing in settings");

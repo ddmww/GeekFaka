@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
+import { EPAY_GATEWAYS_KEY, parseEpayGateways, validateEpayGateways } from "@/lib/payments/epay-config";
 
 export async function GET() {
   if (!await isAuthenticated()) return new NextResponse("Unauthorized", { status: 401 });
@@ -23,6 +24,10 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
+
+    if (typeof body[EPAY_GATEWAYS_KEY] === "string") {
+      validateEpayGateways(parseEpayGateways(body[EPAY_GATEWAYS_KEY]));
+    }
     
     // Upsert each setting
     for (const [key, value] of Object.entries(body)) {
@@ -34,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to save settings" }, { status: 500 });
   }
 }

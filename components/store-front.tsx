@@ -168,7 +168,7 @@ export function StoreFront({ categories }: { categories: Category[] }) {
         paymentMethod: providerName,
         couponCode: appliedCoupon?.code,
         options: {
-          channel: paymentMethod === "wechat" ? "wxpay" : paymentMethod
+          channel: paymentMethod
         }
       }
 

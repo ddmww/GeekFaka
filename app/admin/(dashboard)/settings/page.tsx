@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Save, Loader2, ShieldCheck, CreditCard, Settings, CheckCircle2, AlertCircle } from "lucide-react"
+import { Save, Loader2, ShieldCheck, CreditCard, Settings, CheckCircle2, AlertCircle, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,9 +19,88 @@ import { Checkbox } from "@/components/ui/checkbox"
 const EPAY_SUB_CHANNELS = [
   { id: "alipay", label: "支付宝" },
   { id: "wxpay", label: "微信支付" },
-  { id: "qqpay", label: "QQ钱包" },
-  { id: "usdt", label: "USDT" },
 ]
+
+type EpayGatewayDraft = {
+  id: string
+  name: string
+  enabled: boolean
+  channels: Array<"alipay" | "wxpay">
+  apiUrl: string
+  pid: string
+  key: string
+  signType: "MD5" | "RSA"
+  publicKey: string
+  privateKey: string
+  fee: number
+}
+
+const emptyEpayGateway = (channel: "alipay" | "wxpay" = "alipay"): EpayGatewayDraft => ({
+  id: `epay_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  name: channel === "alipay" ? "支付宝易支付" : "微信易支付",
+  enabled: true,
+  channels: [channel],
+  apiUrl: "",
+  pid: "",
+  key: "",
+  signType: "MD5",
+  publicKey: "",
+  privateKey: "",
+  fee: 0,
+})
+
+const normalizeEpayGateway = (raw: any, index: number): EpayGatewayDraft => {
+  const legacyChannel = raw?.channel === "wxpay" ? "wxpay" : "alipay"
+  const rawChannels = Array.isArray(raw?.channels) ? raw.channels : [raw?.channel || legacyChannel]
+  const channels: Array<"alipay" | "wxpay"> = Array.from(new Set(rawChannels.filter((item: unknown): item is "alipay" | "wxpay" => item === "alipay" || item === "wxpay")))
+  const fee = Number.parseFloat(String(raw?.fee ?? "0"))
+  const primaryChannel = channels[0] || legacyChannel
+
+  return {
+    id: String(raw?.id || `epay_${index}_${Date.now()}`),
+    name: String(raw?.name || (primaryChannel === "alipay" ? "支付宝易支付" : "微信易支付")),
+    enabled: raw?.enabled === true || raw?.enabled === "true",
+    channels: channels.length > 0 ? channels : [primaryChannel],
+    apiUrl: String(raw?.apiUrl || ""),
+    pid: String(raw?.pid || ""),
+    key: String(raw?.key || ""),
+    signType: raw?.signType === "RSA" ? "RSA" : "MD5",
+    publicKey: String(raw?.publicKey || ""),
+    privateKey: String(raw?.privateKey || ""),
+    fee: Number.isFinite(fee) ? fee : 0,
+  }
+}
+
+const parseEpayGateways = (config: Record<string, string>): EpayGatewayDraft[] => {
+  if (config.epay_gateways) {
+    try {
+      const parsed = JSON.parse(config.epay_gateways)
+      if (Array.isArray(parsed)) {
+        return parsed.map(normalizeEpayGateway)
+      }
+    } catch {
+      // Fall back to legacy fields below.
+    }
+  }
+
+  if (config.epay_enabled !== "true") return [{ ...emptyEpayGateway("alipay"), enabled: false }]
+
+  const channels = (config.epay_channels || "alipay,wxpay").split(",").filter((item): item is "alipay" | "wxpay" => item === "alipay" || item === "wxpay")
+  const fee = Number.parseFloat(config.epay_fee || "0")
+  return channels.map((channel, index) => normalizeEpayGateway({
+    id: `legacy_${channel}`,
+    name: channel === "alipay" ? "支付宝易支付" : "微信易支付",
+    enabled: true,
+    channels: [channel],
+    apiUrl: config.epay_api_url,
+    pid: config.epay_pid,
+    key: config.epay_key,
+    signType: config.epay_sign_type,
+    publicKey: config.epay_public_key,
+    privateKey: config.epay_private_key,
+    fee,
+  }, index))
+}
 
 // Define available providers metadata
 const PROVIDERS = [
@@ -42,6 +121,7 @@ export default function SettingsPage() {
   const [config, setConfig] = useState<Record<string, string>>({})
   const [draftConfig, setDraftConfig] = useState<Record<string, string>>({})
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const epayGateways = parseEpayGateways(draftConfig)
 
   useEffect(() => {
     fetchConfig()
@@ -71,11 +151,56 @@ export default function SettingsPage() {
     setDraftConfig(prev => ({ ...prev, [key]: value }))
   }
 
+  const setEpayGateways = (gateways: EpayGatewayDraft[]) => {
+    setDraftConfig(prev => ({ ...prev, epay_gateways: JSON.stringify(gateways) }))
+  }
+
+  const updateEpayGateway = (id: string, patch: Partial<EpayGatewayDraft>) => {
+    setEpayGateways(epayGateways.map(gateway => gateway.id === id ? { ...gateway, ...patch } : gateway))
+  }
+
+  const addEpayGateway = () => {
+    const used = new Set(epayGateways.filter(item => item.enabled).flatMap(item => item.channels))
+    const nextChannel = used.has("alipay") && !used.has("wxpay") ? "wxpay" : "alipay"
+    setEpayGateways([...epayGateways, emptyEpayGateway(nextChannel)])
+  }
+
+  const removeEpayGateway = (id: string) => {
+    const next = epayGateways.filter(gateway => gateway.id !== id)
+    setEpayGateways(next.length > 0 ? next : [emptyEpayGateway("alipay")])
+  }
+
+  const validateEpayGatewayConflicts = (gateways: EpayGatewayDraft[]) => {
+    const enabledChannels = new Map<string, string>()
+    for (const gateway of gateways) {
+      if (!gateway.enabled) continue
+      for (const channel of gateway.channels) {
+        const label = EPAY_SUB_CHANNELS.find(item => item.id === channel)?.label || channel
+        const existing = enabledChannels.get(channel)
+        if (existing) {
+          return `${label} 已分配给「${existing}」，不能重复启用`
+        }
+        enabledChannels.set(channel, gateway.name || label)
+      }
+    }
+    return ""
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
       // Prepare payload: remove empty password
       const payload = { ...draftConfig }
+      if (selectedProvider === "epay") {
+        const gateways = parseEpayGateways(payload)
+        const conflict = validateEpayGatewayConflicts(gateways)
+        if (conflict) {
+          alert(conflict)
+          setSaving(false)
+          return
+        }
+        payload.epay_gateways = JSON.stringify(gateways)
+      }
       if (!payload.admin_password) {
         delete payload.admin_password
       }
@@ -96,7 +221,8 @@ export default function SettingsPage() {
         setConfig(newDraft)
         setSelectedProvider(null)
       } else {
-        alert("保存失败")
+        const data = await res.json().catch(() => null)
+        alert(data?.error || "保存失败")
       }
     } catch (error) {
       console.error(error)
@@ -127,8 +253,9 @@ export default function SettingsPage() {
         <TabsContent value="payment" className="space-y-4 mt-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {PROVIDERS.map((provider) => {
-              const isEnabled = config[provider.enabledKey] === "true"
-              const isConfigured = !!config[provider.statusKey]
+              const providerGateways = provider.id === "epay" ? parseEpayGateways(config) : []
+              const isEnabled = provider.id === "epay" ? providerGateways.some(item => item.enabled) : config[provider.enabledKey] === "true"
+              const isConfigured = provider.id === "epay" ? providerGateways.some(item => item.enabled && item.apiUrl && item.pid) : !!config[provider.statusKey]
               const Icon = provider.icon
 
               return (
@@ -394,132 +521,145 @@ export default function SettingsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/20">
-              <div className="space-y-0.5">
-                <Label className="text-base">启用此支付渠道</Label>
-                <p className="text-xs text-muted-foreground">关闭后前台将不可见</p>
-              </div>
-              <Switch
-                checked={draftConfig.epay_enabled === "true"}
-                onCheckedChange={(checked) => handleChange("epay_enabled", String(checked))}
-              />
-            </div>
+            {epayGateways.map((gateway, index) => (
+              <div key={gateway.id} className="grid gap-4 rounded-lg border p-4 bg-muted/10">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">易支付 #{index + 1}</Label>
+                    <p className="text-xs text-muted-foreground">每个支付方式只能分配给一个已启用网关。</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={gateway.enabled}
+                      onCheckedChange={(checked) => updateEpayGateway(gateway.id, { enabled: Boolean(checked) })}
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => removeEpayGateway(gateway.id)} disabled={epayGateways.length <= 1}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
 
-            {/* Sub-channel Selection */}
-            <div className="grid gap-3 border rounded-lg p-4">
-              <Label>支持的支付方式</Label>
-              <div className="grid grid-cols-2 gap-4">
-                {EPAY_SUB_CHANNELS.map((sub) => {
-                  const currentChannels = (draftConfig.epay_channels || "").split(",").filter(Boolean);
-                  const isChecked = currentChannels.includes(sub.id);
+                <div className="grid gap-2">
+                  <Label>渠道名称</Label>
+                  <Input
+                    value={gateway.name}
+                    onChange={e => updateEpayGateway(gateway.id, { name: e.target.value })}
+                    placeholder="例如：主用易支付 / 微信备用通道"
+                  />
+                </div>
 
-                  return (
-                    <div key={sub.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`chan-${sub.id}`}
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          let newChannels;
-                          if (checked) {
-                            newChannels = [...currentChannels, sub.id];
-                          } else {
-                            newChannels = currentChannels.filter(c => c !== sub.id);
-                          }
-                          handleChange("epay_channels", newChannels.join(","));
-                        }}
+                <div className="grid gap-3 rounded-lg border p-3">
+                  <Label>支持的支付方式</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {EPAY_SUB_CHANNELS.map((sub) => {
+                      const isChecked = gateway.channels.includes(sub.id as "alipay" | "wxpay")
+                      return (
+                        <div key={sub.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`gateway-${gateway.id}-${sub.id}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              const nextChannels = checked
+                                ? Array.from(new Set([...gateway.channels, sub.id as "alipay" | "wxpay"]))
+                                : gateway.channels.filter(channel => channel !== sub.id)
+                              updateEpayGateway(gateway.id, { channels: nextChannels })
+                            }}
+                          />
+                          <Label htmlFor={`gateway-${gateway.id}-${sub.id}`} className="font-normal cursor-pointer">
+                            {sub.label}
+                          </Label>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>交易手续费率 (%)</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0"
+                      className="pr-8"
+                      value={String(gateway.fee)}
+                      onChange={e => updateEpayGateway(gateway.id, { fee: Number.parseFloat(e.target.value || "0") || 0 })}
+                    />
+                    <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>API 接口地址</Label>
+                  <Input
+                    placeholder="https://pay.example.com/"
+                    value={gateway.apiUrl}
+                    onChange={e => updateEpayGateway(gateway.id, { apiUrl: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>商户 ID (PID)</Label>
+                    <Input
+                      value={gateway.pid}
+                      onChange={e => updateEpayGateway(gateway.id, { pid: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>签名方式</Label>
+                    <Select
+                      value={gateway.signType}
+                      onValueChange={val => updateEpayGateway(gateway.id, { signType: val as "MD5" | "RSA" })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MD5">MD5 (默认)</SelectItem>
+                        <SelectItem value="RSA">RSA (推荐)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {gateway.signType === "RSA" ? (
+                  <>
+                    <div className="grid gap-2">
+                      <Label>商户私钥 (Private Key)</Label>
+                      <Textarea
+                        placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                        className="font-mono text-xs h-32"
+                        value={gateway.privateKey}
+                        onChange={e => updateEpayGateway(gateway.id, { privateKey: e.target.value })}
                       />
-                      <Label htmlFor={`chan-${sub.id}`} className="font-normal cursor-pointer">
-                        {sub.label}
-                      </Label>
                     </div>
-                  )
-                })}
+                    <div className="grid gap-2">
+                      <Label>平台公钥 (Public Key)</Label>
+                      <Textarea
+                        placeholder="-----BEGIN PUBLIC KEY-----"
+                        className="font-mono text-xs h-32"
+                        value={gateway.publicKey}
+                        onChange={e => updateEpayGateway(gateway.id, { publicKey: e.target.value })}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-2">
+                    <Label>商户密钥 (Key)</Label>
+                    <Input
+                      type="password"
+                      value={gateway.key}
+                      onChange={e => updateEpayGateway(gateway.id, { key: e.target.value })}
+                    />
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">勾选您的易支付网关实际支持的支付方式。</p>
-            </div>
+            ))}
 
-            <div className="grid gap-2">
-              <Label>交易手续费率 (%)</Label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  className="pr-8"
-                  value={draftConfig.epay_fee || ""}
-                  onChange={e => handleChange("epay_fee", e.target.value)}
-                />
-                <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-              </div>
-              <p className="text-xs text-muted-foreground">用户支付时需额外承担的费率，0 为不收取。例如填 3 代表 3%。</p>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>API 接口地址</Label>
-              <Input
-                placeholder="https://pay.example.com/"
-                value={draftConfig.epay_api_url || ""}
-                onChange={e => handleChange("epay_api_url", e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>商户 ID (PID)</Label>
-                <Input
-                  value={draftConfig.epay_pid || ""}
-                  onChange={e => handleChange("epay_pid", e.target.value)}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>签名方式</Label>
-                <Select
-                  value={draftConfig.epay_sign_type || "MD5"}
-                  onValueChange={val => handleChange("epay_sign_type", val)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MD5">MD5 (默认)</SelectItem>
-                    <SelectItem value="RSA">RSA (推荐)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {draftConfig.epay_sign_type === "RSA" ? (
-              <>
-                <div className="grid gap-2">
-                  <Label>商户私钥 (Private Key)</Label>
-                  <Textarea
-                    placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                    className="font-mono text-xs h-32"
-                    value={draftConfig.epay_private_key || ""}
-                    onChange={e => handleChange("epay_private_key", e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">请填入你的 RSA 私钥 (PKCS#1 或 PKCS#8)</p>
-                </div>
-                <div className="grid gap-2">
-                  <Label>平台公钥 (Public Key)</Label>
-                  <Textarea
-                    placeholder="-----BEGIN PUBLIC KEY-----"
-                    className="font-mono text-xs h-32"
-                    value={draftConfig.epay_public_key || ""}
-                    onChange={e => handleChange("epay_public_key", e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">请填入易支付平台的公钥用于验签</p>
-                </div>
-              </>
-            ) : (
-              <div className="grid gap-2">
-                <Label>商户密钥 (Key)</Label>
-                <Input
-                  type="password"
-                  value={draftConfig.epay_key || ""}
-                  onChange={e => handleChange("epay_key", e.target.value)}
-                />
-              </div>
-            )}
+            <Button variant="outline" onClick={addEpayGateway} className="w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              添加易支付
+            </Button>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedProvider(null)}>取消</Button>
