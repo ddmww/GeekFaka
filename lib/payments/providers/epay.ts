@@ -185,7 +185,7 @@ export class EpayProvider implements PaymentAdapter {
       });
 
       const result = await res.json();
-      const payUrl = typeof result.data === "string" ? result.data : result.data?.pay_url;
+      const payUrl = typeof result.data === "string" ? result.data : result.data?.pay_url || result.data?.payurl;
 
       if (result.code === 1 && payUrl) {
         const transactionId = this.extractTradeNo(payUrl);

@@ -53,21 +53,11 @@ async function processNotification(data: any, req?: Request) {
         }
         log.info("Order already paid, skipping idempotency check");
       } else {
-        // Check for expiration (30 mins)
-        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-        if (order.createdAt < thirtyMinutesAgo) {
-          log.warn("Payment received for expired order");
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { status: "EXPIRED" }
-          });
-          return new NextResponse("SUCCESS");
-        }
-
         const result = await fulfillPaidOrder({
           orderNo: callbackData.orderNo,
           paymentMethod: "epay",
           epayTradeNo: callbackData.transactionId,
+          claimableStatuses: ["PENDING", "FAILED", "EXPIRED"],
         });
 
         if (result.fulfilled) {
